@@ -4,6 +4,7 @@
 
 #[openbrush::contract]
 pub mod my_psp22_wrapper {
+    use ibc::ibc::*;
     use ink::prelude::borrow::ToOwned;
     use ink::prelude::{
         string::{String, ToString},
@@ -12,32 +13,32 @@ pub mod my_psp22_wrapper {
     use openbrush::{contracts::psp22::extensions::wrapper::*, traits::Storage};
     use scale::{Decode, Encode};
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Addr(String);
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct MessageInfo {
         pub sender: Addr,
         pub funds: Vec<Coin>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Coin {
         pub denom: String,
         pub amount: u128,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Cw20Coin {
         pub address: String,
         pub amount: u128,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Cw20ReceiveMsg {
         pub sender: String,
@@ -45,14 +46,14 @@ pub mod my_psp22_wrapper {
         pub msg: Vec<u8>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct AllowMsg {
         pub contract: String,
         pub gas_limit: Option<u64>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct InitMsg {
         /// Default timeout for ics20 packets, specified in seconds
@@ -66,7 +67,7 @@ pub mod my_psp22_wrapper {
         pub default_gas_limit: Option<u64>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct TransferMsg {
         /// The local channel to send the packets on
@@ -81,7 +82,7 @@ pub mod my_psp22_wrapper {
         pub memo: Option<String>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Amount {
         Native(Coin),
@@ -143,14 +144,14 @@ pub mod my_psp22_wrapper {
         }
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct IbcEndpoint {
         pub port_id: String,
         pub channel_id: String,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ChannelInfo {
         /// id of this channel
@@ -161,26 +162,26 @@ pub mod my_psp22_wrapper {
         pub connection_id: String,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct AllowedInfo {
         pub contract: String,
         pub gas_limit: Option<u64>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct PortResponse {
         pub port_id: String,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ListChannelsResponse {
         pub channels: Vec<ChannelInfo>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ChannelResponse {
         /// Information on the channel's connection
@@ -192,7 +193,7 @@ pub mod my_psp22_wrapper {
         pub total_sent: Vec<Amount>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ConfigResponse {
         pub default_timeout: u64,
@@ -200,14 +201,14 @@ pub mod my_psp22_wrapper {
         pub gov_contract: String,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct AllowedResponse {
         pub is_allowed: bool,
         pub gas_limit: Option<u64>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ListAllowedResponse {
         pub allow: Vec<AllowedInfo>,
@@ -222,57 +223,6 @@ pub mod my_psp22_wrapper {
     //     Allow(AllowMsg),
     //     /// Change the admin (must be called by current admin)
     //     UpdateAdmin { admin: String },
-    // }
-
-    // pub struct IbcChannel {
-    //     pub endpoint: IbcEndpoint,
-    //     pub counterparty_endpoint: IbcEndpoint,
-    //     pub order: IbcOrder,
-    //     /// Note: in ibcv3 this may be "", in the IbcOpenChannel handshake messages
-    //     pub version: String,
-    //     /// The connection upon which this channel was created. If this is a multi-hop
-    //     /// channel, we only expose the first hop.
-    //     pub connection_id: String,
-    // }
-    // pub enum IbcChannelOpenMsg {
-    //     /// The ChanOpenInit step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenInit { channel: IbcChannel },
-    //     /// The ChanOpenTry step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenTry {
-    //         channel: IbcChannel,
-    //         counterparty_version: String,
-    //     },
-    // }
-    // pub enum IbcChannelConnectMsg {
-    //     /// The ChanOpenAck step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenAck {
-    //         channel: IbcChannel,
-    //         counterparty_version: String,
-    //     },
-    //     /// The ChanOpenConfirm step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenConfirm { channel: IbcChannel },
-    // }
-    // pub enum IbcChannelCloseMsg {
-    //     /// The ChanCloseInit step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     CloseInit { channel: IbcChannel },
-    //     /// The ChanCloseConfirm step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     CloseConfirm { channel: IbcChannel }, // pub channel: IbcChannel,
-    // }
-    // pub struct IbcPacketReceiveMsg {
-    //     pub packet: IbcPacket,
-    //     #[cfg(feature = "ibc3")]
-    //     pub relayer: Addr,
-    // }
-    // pub struct IbcPacketAckMsg {
-    //     pub acknowledgement: IbcAcknowledgement,
-    //     pub original_packet: IbcPacket,
-    //     #[cfg(feature = "ibc3")]
-    //     pub relayer: Addr,
-    // }
-    // pub struct IbcPacketTimeoutMsg {
-    //     pub packet: IbcPacket,
-    //     #[cfg(feature = "ibc3")]
-    //     pub relayer: Addr,
     // }
 
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
@@ -346,6 +296,89 @@ pub mod my_psp22_wrapper {
 
     impl PSP22Wrapper for Contract {}
 
+    impl BaseIbc for Contract {
+        // ibc base function
+        #[ink(message)]
+        fn reply(&self, reply: Reply) -> Response {
+            Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            }
+        }
+
+        #[ink(message)]
+        fn migrate(&self, _msg: Empty) -> Response {
+            Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            }
+        }
+
+        #[ink(message)]
+        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse {
+            ()
+        }
+
+        #[ink(message)]
+        fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse {
+            IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            }
+        }
+
+        #[ink(message)]
+        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse {
+            IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            }
+        }
+
+        #[ink(message)]
+        fn ibc_packet_receive(
+            &self,
+            msg: IbcPacketReceiveMsg,
+        ) -> Result<IbcReceiveResponse, ibc::ibc::Error> {
+            Ok(IbcReceiveResponse {
+                acknowledgement: Vec::new(),
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            })
+        }
+
+        #[ink(message)]
+        fn ibc_packet_ack(
+            &self,
+            _msg: IbcPacketAckMsg,
+        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            Ok(IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            })
+        }
+
+        #[ink(message)]
+        fn ibc_packet_timeout(
+            &self,
+            _msg: IbcPacketTimeoutMsg,
+        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            Ok(IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            })
+        }
+    }
+
     impl Contract {
         #[ink(constructor)]
         pub fn new(token_address: AccountId, msg: InitMsg) -> Self {
@@ -378,37 +411,6 @@ pub mod my_psp22_wrapper {
         //update admin address
         #[ink(message)]
         pub fn execute_update_admin(&self, addr: Addr) {}
-
-        // ibc base function
-        // #[ink(message)]
-        // pub fn reply(reply: Reply) -> Result<Response, ContractError> {}
-
-        // #[ink(message)]
-        // pub fn ibc_channel_open(msg: IbcChannelOpenMsg) -> Result<(), ContractError> {}
-
-        // #[ink(message)]
-        // pub fn ibc_channel_connect(
-        //     msg: IbcChannelConnectMsg,
-        // ) -> Result<IbcBasicResponse, ContractError> {
-        // }
-
-        // #[ink(message)]
-        // pub fn ibc_channel_close(
-        //     _channel: IbcChannelCloseMsg,
-        // ) -> Result<IbcBasicResponse, ContractError> {
-        // }
-
-        // #[ink(message)]
-        // pub fn ibc_packet_receive(msg: IbcPacketReceiveMsg) -> Result<IbcReceiveResponse, Never> {}
-
-        // #[ink(message)]
-        // pub fn ibc_packet_ack(msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, ContractError> {}
-
-        // #[ink(message)]
-        // pub fn ibc_packet_timeout(
-        //     msg: IbcPacketTimeoutMsg,
-        // ) -> Result<IbcBasicResponse, ContractError> {
-        // }
 
         // query function list
 
