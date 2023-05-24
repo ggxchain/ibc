@@ -174,26 +174,196 @@ pub mod ibc {
     #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum CosmosMsg<T> {
-        //(BankMsg),
+        Bank(BankMsg),
         // by default we use RawMsg, but a contract can override that
         // to call into more app-specific code (whatever they define)
         Custom(T),
-        // #[cfg(feature = "staking")]
-        // Staking(StakingMsg),
-        // #[cfg(feature = "staking")]
-        // Distribution(DistributionMsg),
-        // /// A Stargate message encoded the same way as a protobuf [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
-        // /// This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
-        // #[cfg(feature = "stargate")]
-        // Stargate {
-        //     type_url: String,
-        //     value: Binary,
-        // },
-        // #[cfg(feature = "stargate")]
-        // Ibc(IbcMsg),
-        // Wasm(WasmMsg),
-        // #[cfg(feature = "stargate")]
-        // Gov(GovMsg),
+        //#[cfg(feature = "staking")]
+        Staking(StakingMsg),
+        //#[cfg(feature = "staking")]
+        Distribution(DistributionMsg),
+        /// A Stargate message encoded the same way as a protobuf [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
+        /// This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
+        //#[cfg(feature = "stargate")]
+        Stargate {
+            type_url: String,
+            value: Vec<u8>,
+        },
+        //#[cfg(feature = "stargate")]
+        Ibc(IbcMsg),
+        Wasm(WasmMsg),
+        //#[cfg(feature = "stargate")]
+        //Gov(GovMsg),
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum BankMsg {
+        /// Sends native tokens from the contract to the given address.
+        ///
+        /// This is translated to a [MsgSend](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/bank/v1beta1/tx.proto#L19-L28).
+        /// `from_address` is automatically filled with the current contract's address.
+        Send {
+            to_address: String,
+            amount: Vec<Coin>,
+        },
+        /// This will burn the given coins from the contract's account.
+        /// There is no Cosmos SDK message that performs this, but it can be done by calling the bank keeper.
+        /// Important if a contract controls significant token supply that must be retired.
+        Burn { amount: Vec<Coin> },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum StakingMsg {
+        /// This is translated to a [MsgDelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L81-L90).
+        /// `delegator_address` is automatically filled with the current contract's address.
+        Delegate { validator: String, amount: Coin },
+        /// This is translated to a [MsgUndelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L112-L121).
+        /// `delegator_address` is automatically filled with the current contract's address.
+        Undelegate { validator: String, amount: Coin },
+        /// This is translated to a [MsgBeginRedelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L95-L105).
+        /// `delegator_address` is automatically filled with the current contract's address.
+        Redelegate {
+            src_validator: String,
+            dst_validator: String,
+            amount: Coin,
+        },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum DistributionMsg {
+        /// This is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
+        /// `delegator_address` is automatically filled with the current contract's address.
+        SetWithdrawAddress {
+            /// The `withdraw_address`
+            address: String,
+        },
+        /// This is translated to a [[MsgWithdrawDelegatorReward](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L42-L50).
+        /// `delegator_address` is automatically filled with the current contract's address.
+        WithdrawDelegatorReward {
+            /// The `validator_address`
+            validator: String,
+        },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum WasmMsg {
+        /// Dispatches a call to another contract at a known address (with known ABI).
+        ///
+        /// This is translated to a [MsgExecuteContract](https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto#L68-L78).
+        /// `sender` is automatically filled with the current contract's address.
+        Execute {
+            contract_addr: String,
+            /// msg is the json-encoded ExecuteMsg struct (as raw Binary)
+            //#[derivative(Debug(format_with = "binary_to_string"))]
+            msg: Vec<u8>,
+            funds: Vec<Coin>,
+        },
+        /// Instantiates a new contracts from previously uploaded Wasm code.
+        ///
+        /// The contract address is non-predictable. But it is guaranteed that
+        /// when emitting the same Instantiate message multiple times,
+        /// multiple instances on different addresses will be generated. See also
+        /// Instantiate2.
+        ///
+        /// This is translated to a [MsgInstantiateContract](https://github.com/CosmWasm/wasmd/blob/v0.29.2/proto/cosmwasm/wasm/v1/tx.proto#L53-L71).
+        /// `sender` is automatically filled with the current contract's address.
+        Instantiate {
+            admin: Option<String>,
+            code_id: u64,
+            /// msg is the JSON-encoded InstantiateMsg struct (as raw Binary)
+            //#[derivative(Debug(format_with = "binary_to_string"))]
+            msg: Vec<u8>,
+            funds: Vec<Coin>,
+            /// A human-readbale label for the contract
+            label: String,
+        },
+        /// Instantiates a new contracts from previously uploaded Wasm code
+        /// using a predictable address derivation algorithm implemented in
+        /// [`cosmwasm_std::instantiate2_address`].
+        ///
+        /// This is translated to a [MsgInstantiateContract2](https://github.com/CosmWasm/wasmd/blob/v0.29.2/proto/cosmwasm/wasm/v1/tx.proto#L73-L96).
+        /// `sender` is automatically filled with the current contract's address.
+        /// `fix_msg` is automatically set to false.
+        #[cfg(feature = "cosmwasm_1_2")]
+        Instantiate2 {
+            admin: Option<String>,
+            code_id: u64,
+            /// A human-readbale label for the contract
+            label: String,
+            /// msg is the JSON-encoded InstantiateMsg struct (as raw Binary)
+            //#[derivative(Debug(format_with = "binary_to_string"))]
+            msg: Vec<u8>,
+            funds: Vec<Coin>,
+            salt: Vec<u8>,
+        },
+        /// Migrates a given contracts to use new wasm code. Passes a MigrateMsg to allow us to
+        /// customize behavior.
+        ///
+        /// Only the contract admin (as defined in wasmd), if any, is able to make this call.
+        ///
+        /// This is translated to a [MsgMigrateContract](https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto#L86-L96).
+        /// `sender` is automatically filled with the current contract's address.
+        Migrate {
+            contract_addr: String,
+            /// the code_id of the new logic to place in the given contract
+            new_code_id: u64,
+            /// msg is the json-encoded MigrateMsg struct that will be passed to the new code
+            //#[derivative(Debug(format_with = "binary_to_string"))]
+            msg: Vec<u8>,
+        },
+        /// Sets a new admin (for migrate) on the given contract.
+        /// Fails if this contract is not currently admin of the target contract.
+        UpdateAdmin {
+            contract_addr: String,
+            admin: String,
+        },
+        /// Clears the admin on the given contract, so no more migration possible.
+        /// Fails if this contract is not currently admin of the target contract.
+        ClearAdmin { contract_addr: String },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum IbcMsg {
+        /// Sends bank tokens owned by the contract to the given address on another chain.
+        /// The channel must already be established between the ibctransfer module on this chain
+        /// and a matching module on the remote chain.
+        /// We cannot select the port_id, this is whatever the local chain has bound the ibctransfer
+        /// module to.
+        Transfer {
+            /// exisiting channel to send the tokens over
+            channel_id: String,
+            /// address on the remote chain to receive these tokens
+            to_address: String,
+            /// packet data only supports one coin
+            /// https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/applications/transfer/v1/transfer.proto#L11-L20
+            amount: Coin,
+            /// when packet times out, measured on remote chain
+            timeout: IbcTimeout,
+        },
+        /// Sends an IBC packet with given data over the existing channel.
+        /// Data should be encoded in a format defined by the channel version,
+        /// and the module on the other side should know how to parse this.
+        SendPacket {
+            channel_id: String,
+            data: Vec<u8>,
+            /// when packet times out, measured on remote chain
+            timeout: IbcTimeout,
+        },
+        /// This will close an existing channel that is owned by this contract.
+        /// Port is auto-assigned to the contract's IBC port
+        CloseChannel { channel_id: String },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct Coin {
+        pub denom: String,
+        pub amount: u128,
     }
 
     #[derive(Decode, Encode)]
