@@ -3,22 +3,23 @@
 
 #[ink::contract]
 mod ics721demo {
+    use ibc::ibc::*;
     use ink::prelude::{
         string::{String, ToString},
         vec::Vec,
     };
     use scale::{Decode, Encode};
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Addr(String);
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct TokenId(String);
 
     /// A token according to the ICS-721 spec.
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Token {
         /// A unique identifier for the token.
@@ -32,11 +33,11 @@ mod ics721demo {
     /// A class ID according to the ICS-721 spec. The newtype pattern is
     /// used here to provide some distinction between token and class IDs
     /// in the type system.
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ClassId(String);
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Class {
         /// A unique (from the source chain's perspective) identifier for
@@ -66,7 +67,7 @@ mod ics721demo {
         }
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Cw721ReceiveMsg {
         pub sender: String,
@@ -74,21 +75,21 @@ mod ics721demo {
         pub msg: Vec<u8>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct MessageInfo {
         pub sender: Addr,
         pub funds: Vec<Coin>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Coin {
         pub denom: String,
         pub amount: u128,
     }
 
-    #[derive(scale::Decode, scale::Encode, Default)]
+    #[derive(Decode, Encode, Default)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct OwnerOfResponse {
         /// Owner of the token
@@ -97,7 +98,7 @@ mod ics721demo {
         pub approvals: Vec<Approval>,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Approval {
         /// Account that can transfer/send the token
@@ -106,7 +107,7 @@ mod ics721demo {
         pub expires: Expiration,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Expiration {
         /// AtHeight will expire when `env.block.height` >= height
@@ -124,14 +125,14 @@ mod ics721demo {
         }
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Admin {
         Address { addr: String },
         Instantiator {},
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ContractInstantiateInfo {
         pub code_id: u64,
@@ -140,7 +141,7 @@ mod ics721demo {
         pub label: String,
     }
 
-    #[derive(scale::Decode, scale::Encode)]
+    #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct InstantiateMsg {
         /// Code ID of cw721-ics contract. A new cw721-ics will be
@@ -176,107 +177,6 @@ mod ics721demo {
     //     /// Mesages used internally by the contract. These may only be
     //     /// called by the contract itself.
     //     Callback(CallbackMsg),
-    // }
-
-    // pub enum CallbackMsg {
-    //     CreateVouchers {
-    //         /// The address that ought to receive the NFT. This is a local
-    //         /// address, not a bech32 public key.
-    //         receiver: String,
-    //         /// Information about the vouchers being created.
-    //         create: VoucherCreation,
-    //     },
-    //     RedeemVouchers {
-    //         /// The address that should receive the tokens.
-    //         receiver: String,
-    //         /// Information about the vouchers been redeemed.
-    //         redeem: VoucherRedemption,
-    //     },
-    //     /// Mints a NFT of collection class_id for receiver with the
-    //     /// provided id and metadata. Only callable by this contract.
-    //     Mint {
-    //         /// The class_id to mint for. This must have previously been
-    //         /// created with `SaveClass`.
-    //         class_id: ClassId,
-    //         /// The address that ought to receive the NFTs. This is a
-    //         /// local address, not a bech32 public key.
-    //         receiver: String,
-    //         /// The tokens to mint on the collection.
-    //         tokens: Vec<Token>,
-    //     },
-    //     /// In submessage terms, say a message that results in an error
-    //     /// "returns false" and one that succedes "returns true". Returns
-    //     /// the logical conjunction (&&) of all the messages in operands.
-    //     ///
-    //     /// Under the hood this just executes them in order. We use this
-    //     /// to respond with a single ACK when a message calls for the
-    //     /// execution of both `CreateVouchers` and `RedeemVouchers`.
-    //     Conjunction { operands: Vec<WasmMsg> },
-    // }
-
-    // #[cw_serde]
-    // pub struct IbcOutgoingMsg {
-    //     /// The address that should receive the NFT being sent on the
-    //     /// *receiving chain*.
-    //     pub receiver: String,
-    //     /// The *local* channel ID this ought to be sent away on. This
-    //     /// contract must have a connection on this channel.
-    //     pub channel_id: String,
-    //     /// Timeout for the IBC message.
-    //     pub timeout: IbcTimeout,
-    //     /// Memo to add custom string to the msg
-    //     pub memo: Option<String>,
-    // }
-
-    // pub struct IbcChannel {
-    //     pub endpoint: IbcEndpoint,
-    //     pub counterparty_endpoint: IbcEndpoint,
-    //     pub order: IbcOrder,
-    //     /// Note: in ibcv3 this may be "", in the IbcOpenChannel handshake messages
-    //     pub version: String,
-    //     /// The connection upon which this channel was created. If this is a multi-hop
-    //     /// channel, we only expose the first hop.
-    //     pub connection_id: String,
-    // }
-    // pub enum IbcChannelOpenMsg {
-    //     /// The ChanOpenInit step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenInit { channel: IbcChannel },
-    //     /// The ChanOpenTry step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenTry {
-    //         channel: IbcChannel,
-    //         counterparty_version: String,
-    //     },
-    // }
-    // pub enum IbcChannelConnectMsg {
-    //     /// The ChanOpenAck step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenAck {
-    //         channel: IbcChannel,
-    //         counterparty_version: String,
-    //     },
-    //     /// The ChanOpenConfirm step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     OpenConfirm { channel: IbcChannel },
-    // }
-    // pub enum IbcChannelCloseMsg {
-    //     /// The ChanCloseInit step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     CloseInit { channel: IbcChannel },
-    //     /// The ChanCloseConfirm step from https://github.com/cosmos/ibc/tree/master/spec/core/ics-004-channel-and-packet-semantics#channel-lifecycle-management
-    //     CloseConfirm { channel: IbcChannel }, // pub channel: IbcChannel,
-    // }
-    // pub struct IbcPacketReceiveMsg {
-    //     pub packet: IbcPacket,
-    //     #[cfg(feature = "ibc3")]
-    //     pub relayer: Addr,
-    // }
-    // pub struct IbcPacketAckMsg {
-    //     pub acknowledgement: IbcAcknowledgement,
-    //     pub original_packet: IbcPacket,
-    //     #[cfg(feature = "ibc3")]
-    //     pub relayer: Addr,
-    // }
-    // pub struct IbcPacketTimeoutMsg {
-    //     pub packet: IbcPacket,
-    //     #[cfg(feature = "ibc3")]
-    //     pub relayer: Addr,
     // }
 
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
@@ -342,6 +242,89 @@ mod ics721demo {
     pub struct Ics721demo {
         /// Stores a single `bool` value on the storage.
         value: bool,
+    }
+
+    impl BaseIbc for Ics721demo {
+        // ibc base function
+        #[ink(message)]
+        fn reply(&self, reply: Reply) -> Response {
+            Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            }
+        }
+
+        #[ink(message)]
+        fn migrate(&self, _msg: Empty) -> Response {
+            Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            }
+        }
+
+        #[ink(message)]
+        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse {
+            ()
+        }
+
+        #[ink(message)]
+        fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse {
+            IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            }
+        }
+
+        #[ink(message)]
+        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse {
+            IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            }
+        }
+
+        #[ink(message)]
+        fn ibc_packet_receive(
+            &self,
+            msg: IbcPacketReceiveMsg,
+        ) -> Result<IbcReceiveResponse, ibc::ibc::Error> {
+            Ok(IbcReceiveResponse {
+                acknowledgement: Vec::new(),
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            })
+        }
+
+        #[ink(message)]
+        fn ibc_packet_ack(
+            &self,
+            _msg: IbcPacketAckMsg,
+        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            Ok(IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            })
+        }
+
+        #[ink(message)]
+        fn ibc_packet_timeout(
+            &self,
+            _msg: IbcPacketTimeoutMsg,
+        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            Ok(IbcBasicResponse {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+            })
+        }
     }
 
     impl Ics721demo {
@@ -418,12 +401,10 @@ mod ics721demo {
         // }
 
         // #[ink(message)]
-        // pub fn reply(deps: DepsMut, _env: Env, reply: Reply) -> Result<Response, ContractError> {}
+        // pub fn reply(reply: Reply) -> Result<Response, ContractError> {}
 
         // #[ink(message)]
         // pub fn migrate(
-        //     deps: DepsMut,
-        //     _env: Env,
         //     msg: MigrateMsg,
         // ) -> Result<Response, ContractError> {
         // }
