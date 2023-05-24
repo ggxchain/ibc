@@ -515,16 +515,19 @@ mod ics721demo {
     impl Ics721demo {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
-        pub fn new(init_value: bool) -> Self {
-            Self { value: init_value }
+        pub fn new(_msg: InstantiateMsg) -> Self {
+            Self { value: false }
         }
-
         /// Constructor that initializes the `bool` value to `false`.
         ///
         /// Constructors can delegate to other constructors.
         #[ink(constructor)]
         pub fn default() -> Self {
-            Self::new(Default::default())
+            Self::new(InstantiateMsg {
+                cw721_base_code_id: 0,
+                proxy: None,
+                pauser: None,
+            })
         }
 
         /// execute spec set function  for ExecuteMsg
