@@ -369,28 +369,36 @@ pub mod ibc {
 
     #[ink::trait_definition]
     pub trait BaseIbc {
+        /// support submessage callbacks
         #[ink(message)]
         fn reply(&self, reply: Reply) -> Response;
 
+        /// in-place contract migrations
         #[ink(message)]
         fn migrate(&self, _msg: Empty) -> Response;
 
+        /// The first step of a handshake on either chain is ibc_channel_open
         #[ink(message)]
         fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse;
 
+        /// Once both sides have returned Ok() to ibc_channel_open, we move onto the second step of the handshake, which is equivalent to ChanOpenAck and ChanOpenConfirm from the spec
         #[ink(message)]
         fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse;
 
+        /// Once a channel is closed, whether due to an IBC error, at our request, or at the request of the other side, the following callback is made on the contract, which allows it to take appropriate cleanup action
         #[ink(message)]
         fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse;
 
+        /// After a contract on chain A sends a packet, it is generally processed by the contract on chain B on the other side of the channel. This is done by executing the following entry point on chain B:
         #[ink(message)]
         fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg)
             -> Result<IbcReceiveResponse, Error>;
 
+        /// If chain B successfully received the packet (even if the contract returned an error message), chain A will eventually get an acknowledgement:
         #[ink(message)]
         fn ibc_packet_ack(&self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
 
+        /// If the packet was not received on chain B before the timeout, we can be certain that it will never be processed there. In such a case, a relayer can return a timeout proof to cancel the pending packet. In such a case the calling contract will never get ibc_packet_ack, but rather ibc_packet_timeout. One of the two calls will eventually get called for each packet that is sent as long as there is a functioning relayer. (In the absence of a functioning relayer, it will never get a response).
         #[ink(message)]
         fn ibc_packet_timeout(&self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
     }
@@ -408,14 +416,6 @@ pub mod ibc {
         #[ink(constructor)]
         pub fn default() -> Self {
             Self::new(Default::default())
-        }
-
-        /// A message that can be called on instantiated contracts.
-        /// This one flips the value of the stored `bool` from `true`
-        /// to `false` and vice versa.
-        #[ink(message)]
-        pub fn flip(&mut self) {
-            self.value = !self.value;
         }
 
         /// Simply returns the current value of our `bool`.

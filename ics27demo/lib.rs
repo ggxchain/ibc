@@ -75,7 +75,6 @@ mod ics27 {
         pub funds: Vec<Coin>,
     }
 
-
     #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct SubMsgResponse {
@@ -224,6 +223,51 @@ mod ics27 {
     //     Balances {},
     // }
 
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum ExecuteMsg {
+        ReflectMsg { msgs: Vec<CosmosMsg<CustomMsg>> },
+        ReflectSubMsg { msgs: Vec<SubMsg<CustomMsg>> },
+        ChangeOwner { owner: String },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum QueryMsg {
+        //#[returns(AccountResponse)]
+        Account {
+            channel_id: String,
+        },
+        /// Returns all (channel, reflect_account) pairs.
+        /// No pagination - this is a test contract
+        //#[returns(ListAccountsResponse)]
+        ListAccounts {},
+
+        //#[returns(OwnerResponse)]
+        Owner {},
+        /// This will call out to SpecialQuery::Capitalized
+        //#[returns(CapitalizedResponse)]
+        Capitalized {
+            text: String,
+        },
+        /// Queries the blockchain and returns the result untouched
+        //#[returns(ChainResponse)]
+        Chain {
+            request: QueryRequest<SpecialQuery>,
+        },
+        /// Queries another contract and returns the data
+        //#[returns(RawResponse)]
+        Raw {
+            contract: String,
+            key: Vec<u8>,
+        },
+        /// If there was a previous ReflectSubMsg with this ID, returns cosmwasm_std::Reply
+        //#[returns(cosmwasm_std::Reply)]
+        SubMsgResult {
+            id: u64,
+        },
+    }
+
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
@@ -337,6 +381,28 @@ mod ics27 {
             Self::new(InstantiateMsg { reflect_code_id: 0 })
         }
 
+        /// execute spec set function  for ExecuteMsg
+        #[ink(message)]
+        pub fn execute(
+            &self,
+            info: MessageInfo,
+            msg: ExecuteMsg,
+        ) -> Result<Response<CustomMsg>, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
+
+        /// query info for spec QueryMsg
+        #[ink(message)]
+        pub fn query(&self, msg: QueryMsg) -> Result<Vec<u8>, Error> {
+            Ok(Vec::new())
+        }
+
+        /// create a reflect message
         #[ink(message)]
         pub fn try_reflect(
             &self,
@@ -351,6 +417,7 @@ mod ics27 {
             })
         }
 
+        /// create a subcall reflect message
         #[ink(message)]
         pub fn try_reflect_subcall(
             &self,
@@ -365,6 +432,7 @@ mod ics27 {
             })
         }
 
+        /// change contract owner
         #[ink(message)]
         pub fn try_change_owner(
             &self,
@@ -379,12 +447,15 @@ mod ics27 {
             })
         }
 
-        /// query function list
+        /// Returns (reflect) account that is attached to this channel,
+        /// or none.
         #[ink(message)]
         pub fn query_account(&self, channel_id: String) -> AccountResponse {
             AccountResponse { account: None }
         }
 
+        /// Returns all (channel, reflect_account) pairs.
+        /// No pagination - this is a test contract
         #[ink(message)]
         pub fn query_list_accounts(&self) -> ListAccountsResponse {
             ListAccountsResponse {
@@ -392,6 +463,7 @@ mod ics27 {
             }
         }
 
+        /// query contract owner
         #[ink(message)]
         pub fn query_owner(&self) -> OwnerResponse {
             OwnerResponse {
@@ -399,6 +471,7 @@ mod ics27 {
             }
         }
 
+        /// If there was a previous ReflectSubMsg with this ID, returns cosmwasm_std::Reply
         #[ink(message)]
         pub fn query_subcall(&self, id: u64) -> Reply {
             Reply {
@@ -407,6 +480,7 @@ mod ics27 {
             }
         }
 
+        /// This will call out to SpecialQuery::Capitalized
         #[ink(message)]
         pub fn query_capitalized(&self, text: String) -> CapitalizedResponse {
             CapitalizedResponse {
@@ -414,6 +488,7 @@ mod ics27 {
             }
         }
 
+        /// Queries the blockchain and returns the result untouched
         #[ink(message)]
         pub fn query_chain(&self, request: QueryRequest<SpecialQuery>) -> ChainResponse {
             ChainResponse {
@@ -421,6 +496,7 @@ mod ics27 {
             }
         }
 
+        /// Queries another contract and returns the data
         #[ink(message)]
         pub fn query_raw(&self, contract: String, key: Vec<u8>) -> RawResponse {
             RawResponse {

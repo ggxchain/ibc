@@ -214,16 +214,50 @@ pub mod my_psp22_wrapper {
         pub allow: Vec<AllowedInfo>,
     }
 
-    // pub enum ExecuteMsg {
-    //     /// This accepts a properly-encoded ReceiveMsg from a cw20 contract
-    //     Receive(Cw20ReceiveMsg),
-    //     /// This allows us to transfer *exactly one* native token
-    //     Transfer(TransferMsg),
-    //     /// This must be called by gov_contract, will allow a new cw20 token to be sent
-    //     Allow(AllowMsg),
-    //     /// Change the admin (must be called by current admin)
-    //     UpdateAdmin { admin: String },
-    // }
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum ExecuteMsg {
+        /// This accepts a properly-encoded ReceiveMsg from a cw20 contract
+        Receive(Cw20ReceiveMsg),
+        /// This allows us to transfer *exactly one* native token
+        Transfer(TransferMsg),
+        /// This must be called by gov_contract, will allow a new cw20 token to be sent
+        Allow(AllowMsg),
+        /// Change the admin (must be called by current admin)
+        UpdateAdmin { admin: String },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum QueryMsg {
+        /// Return the port ID bound by this contract.
+        //#[returns(PortResponse)]
+        Port {},
+        /// Show all channels we have connected to.
+        // #[returns(ListChannelsResponse)]
+        ListChannels {},
+        /// Returns the details of the name channel, error if not created.
+        //#[returns(ChannelResponse)]
+        Channel {
+            id: String,
+        },
+        /// Show the Config.
+        //#[returns(ConfigResponse)]
+        Config {},
+        //#[returns(cw_controllers::AdminResponse)]
+        Admin {},
+        /// Query if a given cw20 contract is allowed.
+        //#[returns(AllowedResponse)]
+        Allowed {
+            contract: String,
+        },
+        /// List all allowed cw20 contracts.
+        //#[returns(ListAllowedResponse)]
+        ListAllowed {
+            start_after: Option<String>,
+            limit: Option<u32>,
+        },
+    }
 
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -395,25 +429,83 @@ pub mod my_psp22_wrapper {
             self._recover(Self::env().caller())
         }
 
+        /// execute spec set function  for ExecuteMsg
+        #[ink(message)]
+        pub fn execute(&self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
+
+        /// query info for spec QueryMsg
+        #[ink(message)]
+        pub fn query(&self, msg: QueryMsg) -> Result<Vec<u8>, Error> {
+            Ok(Vec::new())
+        }
+
         // set function list
 
-        //receive token
+        /// receive token, This accepts a properly-encoded ReceiveMsg from a cw20 contract
         #[ink(message)]
-        pub fn execute_receive(&self, info: MessageInfo, wrapper: Cw20ReceiveMsg) {}
+        pub fn execute_receive(
+            &self,
+            info: MessageInfo,
+            wrapper: Cw20ReceiveMsg,
+        ) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
 
-        //transfer token
+        /// transfer token, This allows us to transfer *exactly one* native token
         #[ink(message)]
-        pub fn execute_transfer(&self, msg: TransferMsg, amount: Amount, sender: Addr) {}
+        pub fn execute_transfer(
+            &self,
+            msg: TransferMsg,
+            amount: Amount,
+            sender: Addr,
+        ) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
 
+        /// This must be called by gov_contract, will allow a new cw20 token to be sent
+        //// The gov contract can allow new contracts, or increase the gas limit on existing contracts.
+        /// It cannot block or reduce the limit to avoid forcible sticking tokens in the channel.
         #[ink(message)]
-        pub fn execute_allow(&self, info: MessageInfo, allow: AllowMsg) {}
+        pub fn execute_allow(&self, info: MessageInfo, allow: AllowMsg) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
 
-        //update admin address
+        /// update admin address, Change the admin (must be called by current admin)
         #[ink(message)]
-        pub fn execute_update_admin(&self, addr: Addr) {}
+        pub fn execute_update_admin(&self, addr: Addr) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
 
         // query function list
 
+        /// Return the port ID bound by this contract.
         #[ink(message)]
         pub fn query_port(&self) -> PortResponse {
             PortResponse {
@@ -421,6 +513,7 @@ pub mod my_psp22_wrapper {
             }
         }
 
+        /// Show all channels we have connected to.
         #[ink(message)]
         pub fn query_list(&self) -> ListChannelsResponse {
             ListChannelsResponse {
@@ -428,6 +521,7 @@ pub mod my_psp22_wrapper {
             }
         }
 
+        ///  Returns the details of the name channel, error if not created.
         #[ink(message)]
         pub fn query_channel(&self, id: String) -> ChannelResponse {
             ChannelResponse {
@@ -444,6 +538,7 @@ pub mod my_psp22_wrapper {
             }
         }
 
+        /// Show the Config.
         #[ink(message)]
         pub fn query_config(&self) -> ConfigResponse {
             ConfigResponse {
@@ -453,6 +548,7 @@ pub mod my_psp22_wrapper {
             }
         }
 
+        /// Query if a given cw20 contract is allowed.
         #[ink(message)]
         pub fn query_allowed(&self) -> AllowedResponse {
             AllowedResponse {
@@ -461,6 +557,7 @@ pub mod my_psp22_wrapper {
             }
         }
 
+        /// List all allowed cw20 contracts.
         #[ink(message)]
         pub fn list_allowed(
             &self,
@@ -470,6 +567,7 @@ pub mod my_psp22_wrapper {
             ListAllowedResponse { allow: Vec::new() }
         }
 
+        /// Show current admin
         #[ink(message)]
         pub fn query_admin(&self) -> Option<Addr> {
             Some(Addr("".to_string()))

@@ -164,20 +164,205 @@ mod ics721demo {
         pub pauser: Option<String>,
     }
 
-    // #[cw_serde]
-    // pub enum ExecuteMsg {
-    //     /// Receives a NFT to be IBC transfered away. The `msg` field must
-    //     /// be a binary encoded `IbcOutgoingMsg`.
-    //     ReceiveNft(cw721::Cw721ReceiveMsg),
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct VoucherCreation {
+        /// The class that these vouchers are being created for.
+        pub class: Class,
+        /// The tokens to create debt-vouchers for.
+        pub tokens: Vec<Token>,
+    }
 
-    //     /// Pauses the bridge. Only the pauser may call this. In pausing
-    //     /// the contract, the pauser burns the right to do so again.
-    //     Pause {},
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct VoucherRedemption {
+        /// The class that these vouchers are being redeemed from.
+        pub class: Class,
+        /// The tokens belonging to `class` that ought to be redeemed.
+        pub token_ids: Vec<TokenId>,
+    }
 
-    //     /// Mesages used internally by the contract. These may only be
-    //     /// called by the contract itself.
-    //     Callback(CallbackMsg),
-    // }
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum CallbackMsg {
+        CreateVouchers {
+            /// The address that ought to receive the NFT. This is a local
+            /// address, not a bech32 public key.
+            receiver: String,
+            /// Information about the vouchers being created.
+            create: VoucherCreation,
+        },
+        RedeemVouchers {
+            /// The address that should receive the tokens.
+            receiver: String,
+            /// Information about the vouchers been redeemed.
+            redeem: VoucherRedemption,
+        },
+        /// Mints a NFT of collection class_id for receiver with the
+        /// provided id and metadata. Only callable by this contract.
+        Mint {
+            /// The class_id to mint for. This must have previously been
+            /// created with `SaveClass`.
+            class_id: ClassId,
+            /// The address that ought to receive the NFTs. This is a
+            /// local address, not a bech32 public key.
+            receiver: String,
+            /// The tokens to mint on the collection.
+            tokens: Vec<Token>,
+        },
+        /// In submessage terms, say a message that results in an error
+        /// "returns false" and one that succedes "returns true". Returns
+        /// the logical conjunction (&&) of all the messages in operands.
+        ///
+        /// Under the hood this just executes them in order. We use this
+        /// to respond with a single ACK when a message calls for the
+        /// execution of both `CreateVouchers` and `RedeemVouchers`.
+        Conjunction { operands: Vec<WasmMsg> },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum WasmMsg {
+        /// Dispatches a call to another contract at a known address (with known ABI).
+        ///
+        /// This is translated to a [MsgExecuteContract](https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto#L68-L78).
+        /// `sender` is automatically filled with the current contract's address.
+        Execute {
+            contract_addr: String,
+            /// msg is the json-encoded ExecuteMsg struct (as raw Binary)
+            msg: Vec<u8>,
+            funds: Vec<Coin>,
+        },
+        /// Instantiates a new contracts from previously uploaded Wasm code.
+        ///
+        /// The contract address is non-predictable. But it is guaranteed that
+        /// when emitting the same Instantiate message multiple times,
+        /// multiple instances on different addresses will be generated. See also
+        /// Instantiate2.
+        ///
+        /// This is translated to a [MsgInstantiateContract](https://github.com/CosmWasm/wasmd/blob/v0.29.2/proto/cosmwasm/wasm/v1/tx.proto#L53-L71).
+        /// `sender` is automatically filled with the current contract's address.
+        Instantiate {
+            admin: Option<String>,
+            code_id: u64,
+            msg: Vec<u8>,
+            funds: Vec<Coin>,
+            /// A human-readbale label for the contract
+            label: String,
+        },
+        /// Instantiates a new contracts from previously uploaded Wasm code
+        /// using a predictable address derivation algorithm implemented in
+        /// [`cosmwasm_std::instantiate2_address`].
+        ///
+        /// This is translated to a [MsgInstantiateContract2](https://github.com/CosmWasm/wasmd/blob/v0.29.2/proto/cosmwasm/wasm/v1/tx.proto#L73-L96).
+        /// `sender` is automatically filled with the current contract's address.
+        /// `fix_msg` is automatically set to false.
+        #[cfg(feature = "cosmwasm_1_2")]
+        Instantiate2 {
+            admin: Option<String>,
+            code_id: u64,
+            /// A human-readbale label for the contract
+            label: String,
+            /// msg is the JSON-encoded InstantiateMsg struct (as raw Binary)
+            msg: Vec<u8>,
+            funds: Vec<Coin>,
+            salt: Vec<u8>,
+        },
+        /// Migrates a given contracts to use new wasm code. Passes a MigrateMsg to allow us to
+        /// customize behavior.
+        ///
+        /// Only the contract admin (as defined in wasmd), if any, is able to make this call.
+        ///
+        /// This is translated to a [MsgMigrateContract](https://github.com/CosmWasm/wasmd/blob/v0.14.0/x/wasm/internal/types/tx.proto#L86-L96).
+        /// `sender` is automatically filled with the current contract's address.
+        Migrate {
+            contract_addr: String,
+            /// the code_id of the new logic to place in the given contract
+            new_code_id: u64,
+            /// msg is the json-encoded MigrateMsg struct that will be passed to the new code
+            msg: Vec<u8>,
+        },
+        /// Sets a new admin (for migrate) on the given contract.
+        /// Fails if this contract is not currently admin of the target contract.
+        UpdateAdmin {
+            contract_addr: String,
+            admin: String,
+        },
+        /// Clears the admin on the given contract, so no more migration possible.
+        /// Fails if this contract is not currently admin of the target contract.
+        ClearAdmin { contract_addr: String },
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum ExecuteMsg {
+        /// Receives a NFT to be IBC transfered away. The `msg` field must
+        /// be a binary encoded `IbcOutgoingMsg`.
+        ReceiveNft(Cw721ReceiveMsg),
+
+        /// Pauses the bridge. Only the pauser may call this. In pausing
+        /// the contract, the pauser burns the right to do so again.
+        Pause {},
+
+        /// Mesages used internally by the contract. These may only be
+        /// called by the contract itself.
+        Callback(CallbackMsg),
+    }
+
+    #[derive(Decode, Encode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum QueryMsg {
+        /// Gets the classID this contract has stored for a given NFT
+        /// contract. If there is no class ID for the provided contract,
+        /// returns None.
+        //#[returns(Option<crate::token_types::ClassId>)]
+        ClassId {
+            contract: String,
+        },
+
+        /// Gets the NFT contract associated wtih the provided class
+        /// ID. If no such contract exists, returns None. Returns
+        /// Option<Addr>.
+        //#[returns(Option<::cosmwasm_std::Addr>)]
+        NftContract {
+            class_id: String,
+        },
+
+        /// Gets the class level metadata URI for the provided
+        /// class_id. If there is no metadata, returns None. Returns
+        /// `Option<Class>`.
+        //#[returns(Option<crate::token_types::Class>)]
+        ClassMetadata {
+            class_id: String,
+        },
+
+        //#[returns(Option<crate::token_types::Token>)]
+        TokenMetadata {
+            class_id: String,
+            token_id: String,
+        },
+
+        /// Gets the owner of the NFT identified by CLASS_ID and
+        /// TOKEN_ID. Errors if no such NFT exists. Returns
+        /// `cw721::OwnerOfResonse`.
+        //#[returns(::cw721::OwnerOfResponse)]
+        Owner {
+            class_id: String,
+            token_id: String,
+        },
+
+        /// Gets the address that may pause this contract if one is set.
+        //#[returns(Option<::cosmwasm_std::Addr>)]
+        Pauser {},
+
+        /// Gets the current pause status.
+        //#[returns(bool)]
+        Paused {},
+
+        /// Gets this contract's cw721-proxy if one is set.
+        //#[returns(Option<::cosmwasm_std::Addr>)]
+        Proxy {},
+    }
 
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -342,9 +527,28 @@ mod ics721demo {
             Self::new(Default::default())
         }
 
+        /// execute spec set function  for ExecuteMsg
+        #[ink(message)]
+        pub fn execute(&self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
+
+        /// query info for spec QueryMsg
+        #[ink(message)]
+        pub fn query(&self, msg: QueryMsg) -> Result<Vec<u8>, Error> {
+            Ok(Vec::new())
+        }
+
         //set function list
 
         // receive nft
+        /// Receives a NFT to be IBC transfered away. The `msg` field must
+        /// be a binary encoded `IbcOutgoingMsg`.
         #[ink(message)]
         pub fn execute_receive_nft(
             &self,
@@ -355,95 +559,94 @@ mod ics721demo {
         ) {
         }
 
-        // receive nft
+        // receive proxy nft
+        //In the context of CosmWasm and the ReceiveProxyNft function, the term "eyeball" does not have a specific or predefined meaning. It is possible that "eyeball" is used as a variable or parameter name within the code implementation of ReceiveProxyNft or within the surrounding codebase, but without further information, it is difficult to provide a more specific explanation.
+
         #[ink(message)]
         pub fn execute_receive_proxy_nft(
             &self,
             info: MessageInfo,
             eyeball: String,
             msg: Cw721ReceiveMsg,
-        ) {
+        ) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
+
+        /// Mesages used internally by the contract. These may only be
+        /// called by the contract itself.
+        fn execute_callback(&self, info: MessageInfo, msg: CallbackMsg) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
         }
 
         // pause the contract
+        /// Pauses the bridge. Only the pauser may call this. In pausing
+        /// the contract, the pauser burns the right to do so again.
         #[ink(message)]
-        pub fn execute_pause(&self, info: MessageInfo) {}
-
-        // ibc function list
-        // #[ink(message)]
-        // pub fn ibc_channel_open(
-        //     msg: IbcChannelOpenMsg,
-        // ) -> Result<IbcChannelOpenResponse, ContractError> {
-        // }
-
-        // #[ink(message)]
-        // pub fn ibc_channel_connect(
-        //     msg: IbcChannelConnectMsg,
-        // ) -> Result<IbcBasicResponse, ContractError> {
-        // }
-
-        // #[ink(message)]
-        // pub fn ibc_channel_close(
-        //     msg: IbcChannelCloseMsg,
-        // ) -> Result<IbcBasicResponse, ContractError> {
-        // }
-
-        // #[ink(message)]
-        // pub fn ibc_packet_receive(msg: IbcPacketReceiveMsg) -> Result<IbcReceiveResponse, Never> {}
-
-        // #[ink(message)]
-        // pub fn ibc_packet_ack(ack: IbcPacketAckMsg) -> Result<IbcBasicResponse, ContractError> {}
-
-        // #[ink(message)]
-        // pub fn ibc_packet_timeout(
-        //     msg: IbcPacketTimeoutMsg,
-        // ) -> Result<IbcBasicResponse, ContractError> {
-        // }
-
-        // #[ink(message)]
-        // pub fn reply(reply: Reply) -> Result<Response, ContractError> {}
-
-        // #[ink(message)]
-        // pub fn migrate(
-        //     msg: MigrateMsg,
-        // ) -> Result<Response, ContractError> {
-        // }
+        pub fn execute_pause(&self, info: MessageInfo) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
+        }
 
         //query function list
 
+        /// query class id by contract
         #[ink(message)]
         pub fn query_class_id_for_nft_contract(&self, contract: String) -> Option<ClassId> {
             Some(ClassId("".to_string()))
         }
+
+        /// query contract by class id
         #[ink(message)]
         pub fn query_nft_contract_for_class_id(&self, class_id: String) -> Option<Addr> {
             Some(Addr("".to_string()))
         }
+
+        /// query class metadata
         #[ink(message)]
         pub fn query_class_metadata(&self, class_id: String) -> Option<Class> {
             None
         }
 
+        /// query token metadata
         #[ink(message)]
         pub fn query_token_metadata(&self, class_id: String, token_id: String) -> Option<Token> {
             None
         }
 
+        /// query nft owner
         #[ink(message)]
         pub fn query_owner(&self, class_id: String, token_id: String) -> OwnerOfResponse {
             Default::default()
         }
 
+        /// query pauser admin
         #[ink(message)]
         pub fn query_pauser(&self) -> Option<Addr> {
             Some(Addr("".to_string()))
         }
 
+        /// query if contract is paused
         #[ink(message)]
         pub fn query_paused(&self) -> bool {
             Default::default()
         }
 
+        /// query proxy address
+        /// The proxy that this contract is receiving NFTs from, if any.
         #[ink(message)]
         pub fn query_proxy(&self) -> Option<Addr> {
             Some(Addr("".to_string()))
