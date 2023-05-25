@@ -643,7 +643,7 @@ fn ack_fail(err: String) -> Vec<u8> {
 ```
 
 # 2 ics20 interface
-##2.1 ink! interface
+## 2.1 ink! interface
 ```js
         /// execute spec set function  for ExecuteMsg
         pub fn execute(&self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error>;
@@ -1131,7 +1131,7 @@ pub enum Error {
 ```
 
 ## 2.6 use isc20 transfer video
-![CW20 tokens Transfer through IBC using CW20-ICS20 Smart Contract](https://www.youtube.com/watch?v=Yix0BThxTIU)
+[CW20 tokens Transfer through IBC using CW20-ICS20 Smart Contract](https://www.youtube.com/watch?v=Yix0BThxTIU)
 
 # 3 ics27 interface
 ## 3.1 interface
@@ -1434,7 +1434,20 @@ pub enum Error {
 
 ## 3.4 error
 ```js
+pub enum Error {
+  // let thiserror implement From<StdError> for you
+  StdError,
+  // this is whatever we want
+  ///#[error("Permission denied: the sender is not the current owner")]
+  NotCurrentOwner {
+      expected: String,
+      actual: String,
+  },
+  ///#[error("Messages empty. Must reflect at least one message")]
+  MessagesEmpty,
+}
 ```
+
 # 4 ins721 interface
 ## 4.1 interface
 ```js
