@@ -209,8 +209,14 @@ mod ics27 {
     /// to add new static storage fields to your contract.
     #[ink(storage)]
     pub struct Ics27demo {
-        /// Stores a single `bool` value on the storage.
-        value: bool,
+        /// config static string "config"
+        key_config: Vec<u8>,
+        ///pending_channel static string "pending"
+        key_pending_channel: Vec<u8>,
+        ///prefix_accounts static string "accounts"
+        prefix_accounts: Vec<u8>,
+        ///result static string "result"
+        result_prefix: Vec<u8>,
     }
 
     // pub enum ReflectExecuteMsg {
@@ -370,7 +376,12 @@ mod ics27 {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
         pub fn new(_msg: InstantiateMsg) -> Self {
-            Self { value: false }
+            Self {
+                key_config: Default::default(),
+                key_pending_channel: Default::default(),
+                prefix_accounts: Default::default(),
+                result_prefix: Default::default(),
+            }
         }
 
         /// Constructor that initializes the `bool` value to `false`.

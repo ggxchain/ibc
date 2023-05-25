@@ -8,6 +8,7 @@ mod ics721demo {
         string::{String, ToString},
         vec::Vec,
     };
+    use ink::storage::Mapping;
     use scale::{Decode, Encode};
 
     #[derive(Decode, Encode)]
@@ -364,6 +365,13 @@ mod ics721demo {
         Proxy {},
     }
 
+    #[derive(Decode, Encode, Default)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct PauseOrchestrator {
+        pauser: Option<Addr>,
+        paused: bool,
+    }
+
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
@@ -425,8 +433,31 @@ mod ics721demo {
     /// to add new static storage fields to your contract.
     #[ink(storage)]
     pub struct Ics721demo {
-        /// Stores a single `bool` value on the storage.
-        value: bool,
+        /// The code ID we will use for instantiating new cw721s.
+        cw721_code_id: u64,
+        /// The proxy that this contract is receiving NFTs from, if any.
+        proxy: Option<Addr>,
+        /// Manages contract pauses.
+        pause_orchestrator: PauseOrchestrator,
+        /// Maps classID (from NonFungibleTokenPacketData) to the cw721
+        /// contract we have instantiated for that classID.
+        class_id_to_nft_contract: Mapping<ClassId, Addr>,
+        /// Maps cw721 contracts to the classID they were instantiated for.
+        nft_contract_to_class_id: Mapping<Addr, ClassId>,
+        /// Maps between classIDs and classs. We need to keep this state
+        /// ourselves as cw721 contracts do not have class-level metadata.
+        class_id_to_class: Mapping<ClassId, Class>,
+        /// Maps (class ID, token ID) -> local channel ID. Used to determine
+        /// the local channel that NFTs have been sent out on.
+        outgoing_class_token_to_channel: Mapping<(ClassId, TokenId), String>,
+        /// Same as above, but for NFTs arriving at this contract.
+        incoming_class_token_to_channel: Mapping<(ClassId, TokenId), String>,
+        /// Maps (class ID, token ID) -> token metadata. Used to store
+        /// on-chain metadata for tokens that have arrived from other
+        /// chains. When a token arrives, it's metadata (regardless of if it
+        /// is `None`) is stored in this map. When the token is returned to
+        /// it's source chain, the metadata is removed from the map.
+        token_metadata: Mapping<(ClassId, TokenId), Option<Vec<u8>>>,
     }
 
     impl BaseIbc for Ics721demo {
@@ -516,7 +547,17 @@ mod ics721demo {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
         pub fn new(_msg: InstantiateMsg) -> Self {
-            Self { value: false }
+            Self {
+                cw721_code_id: Default::default(),
+                proxy: Default::default(),
+                pause_orchestrator: Default::default(),
+                class_id_to_nft_contract: Default::default(),
+                nft_contract_to_class_id: Default::default(),
+                class_id_to_class: Default::default(),
+                outgoing_class_token_to_channel: Default::default(),
+                incoming_class_token_to_channel: Default::default(),
+                token_metadata: Default::default(),
+            }
         }
         /// Constructor that initializes the `bool` value to `false`.
         ///

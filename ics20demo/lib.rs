@@ -10,10 +10,11 @@ pub mod my_psp22_wrapper {
         string::{String, ToString},
         vec::Vec,
     };
+    use ink::storage::Mapping;
     use openbrush::{contracts::psp22::extensions::wrapper::*, traits::Storage};
     use scale::{Decode, Encode};
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Default)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Addr(String);
 
@@ -259,6 +260,27 @@ pub mod my_psp22_wrapper {
         },
     }
 
+    #[derive(Decode, Encode, Default)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct Config {
+        pub default_timeout: u64,
+        pub default_gas_limit: Option<u64>,
+    }
+
+    #[derive(Decode, Encode, Default)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct ReplyArgs {
+        pub channel: String,
+        pub denom: String,
+        pub amount: u128,
+    }
+
+    #[derive(Decode, Encode, Default)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct AllowInfo {
+        pub gas_limit: Option<u64>,
+    }
+
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
@@ -324,6 +346,19 @@ pub mod my_psp22_wrapper {
         psp22: psp22::Data,
         #[storage_field]
         wrapper: wrapper::Data,
+
+        /// contract admin
+        admin: Addr,
+        /// isc20_config
+        config: Config,
+        /// Used to pass info from the ibc_packet_receive to the reply handler
+        replay_args: ReplyArgs,
+        /// static info on one channel that doesn't change
+        channel_info: Mapping<String, ChannelInfo>,
+        /// indexed by (channel_id, denom) maintaining the balance of the channel in that currency
+        channel_state: Mapping<String, String>,
+        /// Every cw20 contract we allow to be sent is stored here, possibly with a gas_limit
+        allow_list: Mapping<Addr, AllowInfo>,
     }
 
     impl PSP22 for Contract {}
