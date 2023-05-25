@@ -44,7 +44,7 @@ In order to enable IBC communication, a contract must expose the following 6 ent
         fn ibc_packet_timeout(&self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
 ```
 
-## 1.23 open channel
+## 1.3 open channel
 ```js
         /// The first step of a handshake on either chain is ibc_channel_open
         fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse;
