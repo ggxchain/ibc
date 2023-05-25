@@ -600,7 +600,13 @@ mod ics721demo {
             token_id: String,
             sender: String,
             msg: Vec<u8>,
-        ) {
+        ) -> Result<Response, Error> {
+            Ok(Response {
+                messages: Vec::new(),
+                attributes: Vec::new(),
+                events: Vec::new(),
+                data: None,
+            })
         }
 
         // receive proxy nft
