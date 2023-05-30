@@ -2,7 +2,63 @@
 #![feature(min_specialization)]
 #![feature(default_alloc_error_handler)]
 
-#[openbrush::contract]
+use ink::{
+    env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment},
+    prelude::vec::Vec,
+};
+
+/// General result type.
+pub type Result<T> = core::result::Result<T, IBCICS20Error>;
+
+#[ink::chain_extension]
+pub trait IBCICS20Extension {
+    type ErrorCode = IBCICS20Error;
+
+    #[ink(extension = 0x1102)]
+    fn raw_tranfer(input: Vec<u8>) -> Result<()>;
+}
+
+#[derive(scale::Encode, scale::Decode)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+pub enum IBCICS20Error {
+    FailIBCCall,
+    FailScaleCode,
+}
+
+impl FromStatusCode for IBCICS20Error {
+    fn from_status_code(status_code: u32) -> core::result::Result<(), Self> {
+        match status_code {
+            0 => Ok(()),
+            1 => Err(Self::FailIBCCall),
+            _ => panic!("encountered unknown status code"),
+        }
+    }
+}
+
+// todo(smith) need parse scale error, this is for test
+impl From<scale::Error> for IBCICS20Error {
+    fn from(_: scale::Error) -> Self {
+        panic!("encountered unexpected invalid SCALE encoding")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+pub enum IBCDefaultEnvironment {}
+
+impl Environment for IBCDefaultEnvironment {
+    const MAX_EVENT_TOPICS: usize = <DefaultEnvironment as Environment>::MAX_EVENT_TOPICS;
+
+    type AccountId = <DefaultEnvironment as Environment>::AccountId;
+    type Balance = <DefaultEnvironment as Environment>::Balance;
+    type Hash = <DefaultEnvironment as Environment>::Hash;
+    type BlockNumber = <DefaultEnvironment as Environment>::BlockNumber;
+    type Timestamp = <DefaultEnvironment as Environment>::Timestamp;
+
+    type ChainExtension = IBCICS20Extension;
+}
+
+#[openbrush::contract(env = crate::IBCDefaultEnvironment)]
 pub mod my_psp22_wrapper {
     use ibc::ibc::*;
     use ink::prelude::borrow::ToOwned;
@@ -506,6 +562,7 @@ pub mod my_psp22_wrapper {
             amount: Amount,
             sender: Addr,
         ) -> Result<Response, Error> {
+            let rt = self.env().extension().raw_tranfer(Vec::new());
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
