@@ -1755,24 +1755,6 @@ pub enum Error {
             /// A human-readbale label for the contract
             label: String,
         },
-        /// Instantiates a new contracts from previously uploaded Wasm code
-        /// using a predictable address derivation algorithm implemented in
-        /// [`cosmwasm_std::instantiate2_address`].
-        ///
-        /// This is translated to a [MsgInstantiateContract2](https://github.com/CosmWasm/wasmd/blob/v0.29.2/proto/cosmwasm/wasm/v1/tx.proto#L73-L96).
-        /// `sender` is automatically filled with the current contract's address.
-        /// `fix_msg` is automatically set to false.
-        #[cfg(feature = "cosmwasm_1_2")]
-        Instantiate2 {
-            admin: Option<String>,
-            code_id: u64,
-            /// A human-readbale label for the contract
-            label: String,
-            /// msg is the JSON-encoded InstantiateMsg struct (as raw Binary)
-            msg: Vec<u8>,
-            funds: Vec<Coin>,
-            salt: Vec<u8>,
-        },
         /// Migrates a given contracts to use new wasm code. Passes a MigrateMsg to allow us to
         /// customize behavior.
         ///

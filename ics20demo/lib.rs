@@ -10,12 +10,15 @@ use ink::{
 /// General result type.
 pub type Result<T> = core::result::Result<T, IBCICS20Error>;
 
+type DefaultAccountId = <ink::env::DefaultEnvironment as Environment>::AccountId;
+type DefaultBalance = <ink::env::DefaultEnvironment as Environment>::Balance;
+
 #[ink::chain_extension]
 pub trait IBCICS20Extension {
     type ErrorCode = IBCICS20Error;
 
     #[ink(extension = 0x1102)]
-    fn raw_tranfer(input: Vec<u8>) -> Result<()>;
+    fn raw_tranfer(input: [u8; 4096]) -> Result<()>;
 
     // PSP22 Metadata interfaces
 
@@ -581,7 +584,7 @@ pub mod my_psp22_wrapper {
 
         /// execute spec set function  for ExecuteMsg
         #[ink(message)]
-        pub fn execute(&self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error> {
+        pub fn execute(&mut self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
@@ -601,7 +604,7 @@ pub mod my_psp22_wrapper {
         /// receive token, This accepts a properly-encoded ReceiveMsg from a cw20 contract
         #[ink(message)]
         pub fn execute_receive(
-            &self,
+            &mut self,
             info: MessageInfo,
             wrapper: Cw20ReceiveMsg,
         ) -> Result<Response, Error> {
@@ -616,12 +619,12 @@ pub mod my_psp22_wrapper {
         /// transfer token, This allows us to transfer *exactly one* native token
         #[ink(message)]
         pub fn execute_transfer(
-            &self,
+            &mut self,
             msg: TransferMsg,
             amount: Amount,
             sender: Addr,
         ) -> Result<Response, Error> {
-            let rt = self.env().extension().raw_tranfer(Vec::new());
+            let rt = self.env().extension().raw_tranfer([0; 4096]);
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
@@ -634,7 +637,7 @@ pub mod my_psp22_wrapper {
         //// The gov contract can allow new contracts, or increase the gas limit on existing contracts.
         /// It cannot block or reduce the limit to avoid forcible sticking tokens in the channel.
         #[ink(message)]
-        pub fn execute_allow(&self, info: MessageInfo, allow: AllowMsg) -> Result<Response, Error> {
+        pub fn execute_allow(&mut self, info: MessageInfo, allow: AllowMsg) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
@@ -645,7 +648,7 @@ pub mod my_psp22_wrapper {
 
         /// update admin address, Change the admin (must be called by current admin)
         #[ink(message)]
-        pub fn execute_update_admin(&self, addr: Addr) -> Result<Response, Error> {
+        pub fn execute_update_admin(&mut self, addr: Addr) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),

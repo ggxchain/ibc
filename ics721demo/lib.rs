@@ -251,24 +251,6 @@ mod ics721demo {
             /// A human-readbale label for the contract
             label: String,
         },
-        /// Instantiates a new contracts from previously uploaded Wasm code
-        /// using a predictable address derivation algorithm implemented in
-        /// [`cosmwasm_std::instantiate2_address`].
-        ///
-        /// This is translated to a [MsgInstantiateContract2](https://github.com/CosmWasm/wasmd/blob/v0.29.2/proto/cosmwasm/wasm/v1/tx.proto#L73-L96).
-        /// `sender` is automatically filled with the current contract's address.
-        /// `fix_msg` is automatically set to false.
-        #[cfg(feature = "cosmwasm_1_2")]
-        Instantiate2 {
-            admin: Option<String>,
-            code_id: u64,
-            /// A human-readbale label for the contract
-            label: String,
-            /// msg is the JSON-encoded InstantiateMsg struct (as raw Binary)
-            msg: Vec<u8>,
-            funds: Vec<Coin>,
-            salt: Vec<u8>,
-        },
         /// Migrates a given contracts to use new wasm code. Passes a MigrateMsg to allow us to
         /// customize behavior.
         ///
@@ -573,7 +555,7 @@ mod ics721demo {
 
         /// execute spec set function  for ExecuteMsg
         #[ink(message)]
-        pub fn execute(&self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error> {
+        pub fn execute(&mut self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
@@ -595,7 +577,7 @@ mod ics721demo {
         /// be a binary encoded `IbcOutgoingMsg`.
         #[ink(message)]
         pub fn execute_receive_nft(
-            &self,
+            &mut self,
             info: MessageInfo,
             token_id: String,
             sender: String,
@@ -614,7 +596,7 @@ mod ics721demo {
 
         #[ink(message)]
         pub fn execute_receive_proxy_nft(
-            &self,
+            &mut self,
             info: MessageInfo,
             eyeball: String,
             msg: Cw721ReceiveMsg,
@@ -629,7 +611,7 @@ mod ics721demo {
 
         /// Mesages used internally by the contract. These may only be
         /// called by the contract itself.
-        fn execute_callback(&self, info: MessageInfo, msg: CallbackMsg) -> Result<Response, Error> {
+        fn execute_callback(&mut self, info: MessageInfo, msg: CallbackMsg) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
@@ -642,7 +624,7 @@ mod ics721demo {
         /// Pauses the bridge. Only the pauser may call this. In pausing
         /// the contract, the pauser burns the right to do so again.
         #[ink(message)]
-        pub fn execute_pause(&self, info: MessageInfo) -> Result<Response, Error> {
+        pub fn execute_pause(&mut self, info: MessageInfo) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),

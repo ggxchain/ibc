@@ -395,7 +395,7 @@ mod ics27 {
         /// execute spec set function  for ExecuteMsg
         #[ink(message)]
         pub fn execute(
-            &self,
+            &mut self
             info: MessageInfo,
             msg: ExecuteMsg,
         ) -> Result<Response<CustomMsg>, Error> {
@@ -416,7 +416,7 @@ mod ics27 {
         /// create a reflect message
         #[ink(message)]
         pub fn try_reflect(
-            &self,
+            &mut self，
             info: MessageInfo,
             msgs: Vec<CosmosMsg<CustomMsg>>,
         ) -> Result<Response<CustomMsg>, Error> {
@@ -431,7 +431,7 @@ mod ics27 {
         /// create a subcall reflect message
         #[ink(message)]
         pub fn try_reflect_subcall(
-            &self,
+            &mut self,
             info: MessageInfo,
             msgs: Vec<SubMsg<CustomMsg>>,
         ) -> Result<Response<CustomMsg>, Error> {
@@ -446,7 +446,7 @@ mod ics27 {
         /// change contract owner
         #[ink(message)]
         pub fn try_change_owner(
-            &self,
+            &mut self,
             info: MessageInfo,
             new_owner: String,
         ) -> Result<Response<CustomMsg>, Error> {
