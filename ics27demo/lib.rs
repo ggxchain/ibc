@@ -395,7 +395,7 @@ mod ics27 {
         /// execute spec set function  for ExecuteMsg
         #[ink(message)]
         pub fn execute(
-            &mut self
+            &mut self,
             info: MessageInfo,
             msg: ExecuteMsg,
         ) -> Result<Response<CustomMsg>, Error> {
@@ -416,7 +416,7 @@ mod ics27 {
         /// create a reflect message
         #[ink(message)]
         pub fn try_reflect(
-            &mut self，
+            &mut self,
             info: MessageInfo,
             msgs: Vec<CosmosMsg<CustomMsg>>,
         ) -> Result<Response<CustomMsg>, Error> {

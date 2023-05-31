@@ -20,64 +20,64 @@ pub trait IBCICS20Extension {
     #[ink(extension = 0x1102)]
     fn raw_tranfer(input: [u8; 4096]) -> Result<()>;
 
-    // PSP22 Metadata interfaces
+    //     // PSP22 Metadata interfaces
 
-    #[ink(extension = 0x3d26)]
-    fn token_name(asset_id: u32) -> Result<Vec<u8>>;
+    //     #[ink(extension = 0x3d26)]
+    //     fn token_name(asset_id: u32) -> Result<Vec<u8>>;
 
-    #[ink(extension = 0x3420)]
-    fn token_symbol(asset_id: u32) -> Result<Vec<u8>>;
+    //     #[ink(extension = 0x3420)]
+    //     fn token_symbol(asset_id: u32) -> Result<Vec<u8>>;
 
-    #[ink(extension = 0x7271)]
-    fn token_decimals(asset_id: u32) -> Result<u8>;
+    //     #[ink(extension = 0x7271)]
+    //     fn token_decimals(asset_id: u32) -> Result<u8>;
 
-    // PSP22 interface queries
+    //     // PSP22 interface queries
 
-    #[ink(extension = 0x162d)]
-    fn total_supply(asset_id: u32) -> Result<DefaultBalance>;
+    //     #[ink(extension = 0x162d)]
+    //     fn total_supply(asset_id: u32) -> Result<DefaultBalance>;
 
-    #[ink(extension = 0x6568)]
-    fn balance_of(asset_id: u32, owner: DefaultAccountId) -> Result<DefaultBalance>;
+    //     #[ink(extension = 0x6568)]
+    //     fn balance_of(asset_id: u32, owner: DefaultAccountId) -> Result<DefaultBalance>;
 
-    #[ink(extension = 0x4d47)]
-    fn allowance(
-        asset_id: u32,
-        owner: DefaultAccountId,
-        spender: DefaultAccountId,
-    ) -> Result<DefaultBalance>;
+    //     #[ink(extension = 0x4d47)]
+    //     fn allowance(
+    //         asset_id: u32,
+    //         owner: DefaultAccountId,
+    //         spender: DefaultAccountId,
+    //     ) -> Result<DefaultBalance>;
 
-    // PSP22 transfer
-    #[ink(extension = 0xdb20)]
-    fn transfer(asset_id: u32, to: DefaultAccountId, value: DefaultBalance) -> Result<()>;
+    //     // PSP22 transfer
+    //     #[ink(extension = 0xdb20)]
+    //     fn transfer(asset_id: u32, to: DefaultAccountId, value: DefaultBalance) -> Result<()>;
 
-    // PSP22 transfer_from
-    #[ink(extension = 0x54b3)]
-    fn transfer_from(
-        asset_id: u32,
-        from: DefaultAccountId,
-        to: DefaultAccountId,
-        value: DefaultBalance,
-    ) -> Result<()>;
+    //     // PSP22 transfer_from
+    //     #[ink(extension = 0x54b3)]
+    //     fn transfer_from(
+    //         asset_id: u32,
+    //         from: DefaultAccountId,
+    //         to: DefaultAccountId,
+    //         value: DefaultBalance,
+    //     ) -> Result<()>;
 
-    // PSP22 approve
-    #[ink(extension = 0xb20f)]
-    fn approve(asset_id: u32, spender: DefaultAccountId, value: DefaultBalance) -> Result<()>;
+    //     // PSP22 approve
+    //     #[ink(extension = 0xb20f)]
+    //     fn approve(asset_id: u32, spender: DefaultAccountId, value: DefaultBalance) -> Result<()>;
 
-    // PSP22 increase_allowance
-    #[ink(extension = 0x96d6)]
-    fn increase_allowance(
-        asset_id: u32,
-        spender: DefaultAccountId,
-        value: DefaultBalance,
-    ) -> Result<()>;
+    //     // PSP22 increase_allowance
+    //     #[ink(extension = 0x96d6)]
+    //     fn increase_allowance(
+    //         asset_id: u32,
+    //         spender: DefaultAccountId,
+    //         value: DefaultBalance,
+    //     ) -> Result<()>;
 
-    // PSP22 decrease_allowance
-    #[ink(extension = 0xfecb)]
-    fn decrease_allowance(
-        asset_id: u32,
-        spender: DefaultAccountId,
-        value: DefaultBalance,
-    ) -> Result<()>;
+    //     // PSP22 decrease_allowance
+    //     #[ink(extension = 0xfecb)]
+    //     fn decrease_allowance(
+    //         asset_id: u32,
+    //         spender: DefaultAccountId,
+    //         value: DefaultBalance,
+    //     ) -> Result<()>;
 }
 
 #[derive(scale::Encode, scale::Decode)]
@@ -123,6 +123,7 @@ impl Environment for IBCDefaultEnvironment {
 #[openbrush::contract(env = crate::IBCDefaultEnvironment)]
 pub mod my_psp22_wrapper {
     use ibc::ibc::*;
+
     use ink::prelude::borrow::ToOwned;
     use ink::prelude::{
         string::{String, ToString},
@@ -132,8 +133,11 @@ pub mod my_psp22_wrapper {
     use openbrush::{contracts::psp22::extensions::wrapper::*, traits::Storage};
     use scale::{Decode, Encode};
 
+    #[cfg(feature = "std")]
+    use ink::storage::traits::StorageLayout;
+
     #[derive(Decode, Encode, Default)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct Addr(String);
 
     #[derive(Decode, Encode)]
@@ -264,14 +268,14 @@ pub mod my_psp22_wrapper {
     }
 
     #[derive(Decode, Encode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct IbcEndpoint {
         pub port_id: String,
         pub channel_id: String,
     }
 
     #[derive(Decode, Encode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct ChannelInfo {
         /// id of this channel
         pub id: String,
@@ -379,14 +383,14 @@ pub mod my_psp22_wrapper {
     }
 
     #[derive(Decode, Encode, Default)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct Config {
         pub default_timeout: u64,
         pub default_gas_limit: Option<u64>,
     }
 
     #[derive(Decode, Encode, Default)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct ReplyArgs {
         pub channel: String,
         pub denom: String,
@@ -394,7 +398,7 @@ pub mod my_psp22_wrapper {
     }
 
     #[derive(Decode, Encode, Default)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct AllowInfo {
         pub gas_limit: Option<u64>,
     }
@@ -637,7 +641,11 @@ pub mod my_psp22_wrapper {
         //// The gov contract can allow new contracts, or increase the gas limit on existing contracts.
         /// It cannot block or reduce the limit to avoid forcible sticking tokens in the channel.
         #[ink(message)]
-        pub fn execute_allow(&mut self, info: MessageInfo, allow: AllowMsg) -> Result<Response, Error> {
+        pub fn execute_allow(
+            &mut self,
+            info: MessageInfo,
+            allow: AllowMsg,
+        ) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),

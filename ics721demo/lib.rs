@@ -611,7 +611,11 @@ mod ics721demo {
 
         /// Mesages used internally by the contract. These may only be
         /// called by the contract itself.
-        fn execute_callback(&mut self, info: MessageInfo, msg: CallbackMsg) -> Result<Response, Error> {
+        fn execute_callback(
+            &mut self,
+            info: MessageInfo,
+            msg: CallbackMsg,
+        ) -> Result<Response, Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
