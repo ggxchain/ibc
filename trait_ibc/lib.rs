@@ -6,18 +6,21 @@ pub mod ibc {
     use ink::prelude::{string::String, vec::Vec};
     use scale::{Decode, Encode};
 
+    #[cfg(feature = "std")]
+    use ink::storage::traits::StorageLayout;
+
     #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Addr(String);
 
-    #[derive(Decode, Encode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[derive(Decode, Encode, Clone)]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct IbcEndpoint {
         pub port_id: String,
         pub channel_id: String,
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Clone, PartialEq, Eq)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum IbcOrder {
         Unordered,
@@ -100,7 +103,7 @@ pub mod ibc {
         pub value: String,
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct IbcChannel {
         pub endpoint: IbcEndpoint,
@@ -507,6 +510,8 @@ pub mod ibc {
     pub enum Error {
         // let thiserror implement From<StdError> for you
         StdError,
+        InvalidIbcVersion { version: String },
+        OnlyOrderedChannel,
     }
 
     /// Defines the storage of your contract.
@@ -522,23 +527,27 @@ pub mod ibc {
     pub trait BaseIbc {
         /// support submessage callbacks
         #[ink(message)]
-        fn reply(&self, reply: Reply) -> Response;
+        fn reply(&self, reply: Reply) -> Result<Response, Error>;
 
         /// in-place contract migrations
         #[ink(message)]
-        fn migrate(&self, _msg: Empty) -> Response;
+        fn migrate(&self, _msg: Empty) -> Result<Response, Error>;
 
         /// The first step of a handshake on either chain is ibc_channel_open
         #[ink(message)]
-        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse;
+        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg)
+            -> Result<IbcChannelOpenResponse, Error>;
 
         /// Once both sides have returned Ok() to ibc_channel_open, we move onto the second step of the handshake, which is equivalent to ChanOpenAck and ChanOpenConfirm from the spec
         #[ink(message)]
-        fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse;
+        fn ibc_channel_connect(
+            &mut self,
+            msg: IbcChannelConnectMsg,
+        ) -> Result<IbcBasicResponse, Error>;
 
         /// Once a channel is closed, whether due to an IBC error, at our request, or at the request of the other side, the following callback is made on the contract, which allows it to take appropriate cleanup action
         #[ink(message)]
-        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse;
+        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> Result<IbcBasicResponse, Error>;
 
         /// After a contract on chain A sends a packet, it is generally processed by the contract on chain B on the other side of the channel. This is done by executing the following entry point on chain B:
         #[ink(message)]

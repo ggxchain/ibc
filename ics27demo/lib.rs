@@ -292,46 +292,46 @@ mod ics27 {
     impl BaseIbc for Ics27demo {
         // ibc base function
         #[ink(message)]
-        fn reply(&self, reply: Reply) -> Response {
-            Response {
+        fn reply(&self, reply: Reply) -> Result<Response, ibc::ibc::Error> {
+            Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
                 data: None,
-            }
+            })
         }
 
         #[ink(message)]
-        fn migrate(&self, _msg: Empty) -> Response {
-            Response {
+        fn migrate(&self, _msg: Empty) -> Result<Response, ibc::ibc::Error> {
+            Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
                 data: None,
-            }
+            })
         }
 
         #[ink(message)]
-        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse {
-            ()
+        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> Result<IbcChannelOpenResponse, ibc::ibc::Error> {
+            Ok(())
         }
 
         #[ink(message)]
-        fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse {
-            IbcBasicResponse {
+        fn ibc_channel_connect(&mut self, msg: IbcChannelConnectMsg) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            Ok(IbcBasicResponse {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
-            }
+            })
         }
 
         #[ink(message)]
-        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse {
-            IbcBasicResponse {
+        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            Ok(IbcBasicResponse {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
-            }
+            })
         }
 
         #[ink(message)]

@@ -17,7 +17,7 @@ type DefaultBalance = <ink::env::DefaultEnvironment as Environment>::Balance;
 pub trait IBCICS20Extension {
     type ErrorCode = IBCICS20Error;
 
-    #[ink(extension = 0x1102)]
+    #[ink(extension = 0x20001)]
     fn raw_tranfer(input: [u8; 4096]) -> Result<()>;
 
     //     // PSP22 Metadata interfaces
@@ -132,6 +132,9 @@ pub mod my_psp22_wrapper {
     use ink::storage::Mapping;
     use openbrush::{contracts::psp22::extensions::wrapper::*, traits::Storage};
     use scale::{Decode, Encode};
+
+    pub const ICS20_VERSION: &str = "ics20-1";
+    pub const ICS20_ORDERING: IbcOrder = IbcOrder::Unordered;
 
     #[cfg(feature = "std")]
     use ink::storage::traits::StorageLayout;
@@ -267,14 +270,7 @@ pub mod my_psp22_wrapper {
         }
     }
 
-    #[derive(Decode, Encode)]
-    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
-    pub struct IbcEndpoint {
-        pub port_id: String,
-        pub channel_id: String,
-    }
-
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Clone)]
     #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct ChannelInfo {
         /// id of this channel
@@ -490,46 +486,124 @@ pub mod my_psp22_wrapper {
     impl BaseIbc for Contract {
         // ibc base function
         #[ink(message)]
-        fn reply(&self, reply: Reply) -> Response {
-            Response {
+        fn reply(&self, reply: Reply) -> Result<Response, ibc::ibc::Error> {
+            // match reply.id {
+            //     RECEIVE_ID => match reply.result {
+            //         SubMsgResult::Ok(_) => Ok(Response::new()),
+            //         SubMsgResult::Err(err) => {
+            //             // Important design note:  with ibcv2 and wasmd 0.22 we can implement this all much easier.
+            //             // No reply needed... the receive function and submessage should return error on failure and all
+            //             // state gets reverted with a proper app-level message auto-generated
+
+            //             // Since we need compatibility with Juno (Jan 2022), we need to ensure that optimisitic
+            //             // state updates in ibc_packet_receive get reverted in the (unlikely) chance of an
+            //             // error while sending the token
+
+            //             // However, this requires passing some state between the ibc_packet_receive function and
+            //             // the reply handler. We do this with a singleton, with is "okay" for IBC as there is no
+            //             // reentrancy on these functions (cannot be called by another contract). This pattern
+            //             // should not be used for ExecuteMsg handlers
+            //             let reply_args = REPLY_ARGS.load(deps.storage)?;
+            //             undo_reduce_channel_balance(
+            //                 deps.storage,
+            //                 &reply_args.channel,
+            //                 &reply_args.denom,
+            //                 reply_args.amount,
+            //             )?;
+
+            //             Ok(Response::new().set_data(ack_fail(err)))
+            //         }
+            //     },
+            //     ACK_FAILURE_ID => match reply.result {
+            //         SubMsgResult::Ok(_) => Ok(Response::new()),
+            //         SubMsgResult::Err(err) => Ok(Response::new().set_data(ack_fail(err))),
+            //     },
+            //     _ => Err(ContractError::UnknownReplyId { id: reply.id }),
+            // }
+
+            Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
                 data: None,
-            }
+            })
         }
 
         #[ink(message)]
-        fn migrate(&self, _msg: Empty) -> Response {
-            Response {
+        fn migrate(&self, _msg: Empty) -> Result<Response, ibc::ibc::Error> {
+            Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
                 data: None,
-            }
+            })
         }
 
         #[ink(message)]
-        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse {
-            ()
+        fn ibc_channel_open(
+            &self,
+            msg: IbcChannelOpenMsg,
+        ) -> Result<IbcChannelOpenResponse, ibc::ibc::Error> {
+            let (channel, opt_counterparty_version) = match msg {
+                IbcChannelOpenMsg::OpenInit { channel } => (channel, None),
+                IbcChannelOpenMsg::OpenTry {
+                    channel,
+                    counterparty_version,
+                } => (channel, Some(counterparty_version)),
+            };
+
+            let _ = self.enforce_order_and_version(
+                channel,
+                opt_counterparty_version.as_ref().map(AsRef::as_ref),
+            )?;
+
+            Ok(())
         }
 
         #[ink(message)]
-        fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse {
-            IbcBasicResponse {
+        fn ibc_channel_connect(
+            &mut self,
+            msg: IbcChannelConnectMsg,
+        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            let (channel, opt_counterparty_version) = match msg {
+                IbcChannelConnectMsg::OpenAck {
+                    channel,
+                    counterparty_version,
+                } => (channel, Some(counterparty_version)),
+                IbcChannelConnectMsg::OpenConfirm { channel } => (channel, None),
+            };
+
+            let _ = self.enforce_order_and_version(
+                channel.clone(),
+                opt_counterparty_version.as_deref().map(AsRef::as_ref),
+            )?;
+
+            let info = ChannelInfo {
+                id: channel.endpoint.channel_id,
+                counterparty_endpoint: channel.counterparty_endpoint,
+                connection_id: channel.connection_id,
+            };
+            self.channel_info.insert(&info.id, &info);
+
+            Ok(IbcBasicResponse {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
-            }
+            })
         }
 
         #[ink(message)]
-        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse {
-            IbcBasicResponse {
+        fn ibc_channel_close(
+            &self,
+            msg: IbcChannelCloseMsg,
+        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+            // TODO: what to do here?
+            // we will have locked funds that need to be returned somehow
+            Ok(IbcBasicResponse {
                 messages: Vec::new(),
                 attributes: Vec::new(),
                 events: Vec::new(),
-            }
+            })
         }
 
         #[ink(message)]
@@ -584,6 +658,29 @@ pub mod my_psp22_wrapper {
         #[ink(message)]
         pub fn recover(&mut self) -> Result<Balance, PSP22Error> {
             self._recover(Self::env().caller())
+        }
+
+        fn enforce_order_and_version(
+            &self,
+            channel: IbcChannel,
+            counterparty_version: Option<&str>,
+        ) -> Result<(), ibc::ibc::Error> {
+            if channel.version != ICS20_VERSION {
+                return Err(ibc::ibc::Error::InvalidIbcVersion {
+                    version: channel.version.clone(),
+                });
+            }
+            if let Some(version) = counterparty_version {
+                if version != ICS20_VERSION {
+                    return Err(ibc::ibc::Error::InvalidIbcVersion {
+                        version: version.to_string(),
+                    });
+                }
+            }
+            if channel.order != ICS20_ORDERING {
+                return Err(ibc::ibc::Error::OnlyOrderedChannel {});
+            }
+            Ok(())
         }
 
         /// execute spec set function  for ExecuteMsg

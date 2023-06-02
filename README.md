@@ -2,9 +2,9 @@
 # 1 ibc infomation
 In order to enable IBC communication, a contract must expose the following 6 entry points.
 ```js
-        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse;
-        fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse;
-        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse;
+        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) ->  Result<IbcChannelOpenResponse, Error>;
+        fn ibc_channel_connect(&mut self, msg: IbcChannelConnectMsg) ->  Result<IbcBasicResponse, Error>;
+        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) ->  Result<IbcBasicResponse, Error>;
         fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg) -> Result<IbcReceiveResponse, Error>;
         fn ibc_packet_ack(&self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
         fn ibc_packet_timeout(&self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
@@ -19,19 +19,19 @@ In order to enable IBC communication, a contract must expose the following 6 ent
 ### the ink! interface
 ```js
         /// support submessage callbacks //for developer submessage
-        fn reply(&self, reply: Reply) -> Response;
+        fn reply(&self, reply: Reply) ->  Result<Response, Error>;
 
         /// in-place contract migrations //for contract upgrade
-        fn migrate(&self, _msg: Empty) -> Response;
+        fn migrate(&self, _msg: Empty) ->  Result<Response, Error>;
 
         /// The first step of a handshake on either chain is ibc_channel_open
-        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse;
+        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) ->  Result<IbcChannelOpenResponse, Error>;
 
         /// Once both sides have returned Ok() to ibc_channel_open, we move onto the second step of the handshake, which is equivalent to ChanOpenAck and ChanOpenConfirm from the spec
-        fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse;
+        fn ibc_channel_connect(&mut self, msg: IbcChannelConnectMsg) ->  Result<IbcBasicResponse, Error>;
 
         /// Once a channel is closed, whether due to an IBC error, at our request, or at the request of the other side, the following callback is made on the contract, which allows it to take appropriate cleanup action
-        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse;
+        fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) ->  Result<IbcBasicResponse, Error>;
 
         /// After a contract on chain A sends a packet, it is generally processed by the contract on chain B on the other side of the channel. This is done by executing the following entry point on chain B:
         fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg)
@@ -47,19 +47,19 @@ In order to enable IBC communication, a contract must expose the following 6 ent
 ## 1.3 open channel
 ```js
         /// The first step of a handshake on either chain is ibc_channel_open
-        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> IbcChannelOpenResponse;
+        fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) -> Result<IbcChannelOpenResponse, Error>;
 ```
 
 ## 1.4 connect a channel
 ```js
     /// Once both sides have returned Ok() to ibc_channel_open, we move onto the second step of the handshake, which is equivalent to ChanOpenAck and ChanOpenConfirm from the spec
-    fn ibc_channel_connect(&self, msg: IbcChannelConnectMsg) -> IbcBasicResponse;
+    fn ibc_channel_connect(&mut self, msg: IbcChannelConnectMsg) -> Result<IbcBasicResponse, Error>;
 ```
 
 ## 1.5 close a channel
 ```js
       /// Once a channel is closed, whether due to an IBC error, at our request, or at the request of the other side, the following callback is made on the contract, which allows it to take appropriate cleanup action
-      fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> IbcBasicResponse;
+      fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) -> Result<IbcBasicResponse, Error>;
 ```
 
 ## 1.6 sending a packet
