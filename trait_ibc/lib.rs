@@ -3,8 +3,9 @@
 
 #[ink::contract]
 pub mod ibc {
-    use ink::prelude::{string::String, vec::Vec};
+    use ink::prelude::{string::String, vec, vec::Vec};
     use scale::{Decode, Encode};
+    use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
     #[cfg(feature = "std")]
     use ink::storage::traits::StorageLayout;
@@ -199,6 +200,18 @@ pub mod ibc {
         //Gov(GovMsg),
     }
 
+    impl<T> From<BankMsg> for CosmosMsg<T> {
+        fn from(msg: BankMsg) -> Self {
+            CosmosMsg::Bank(msg)
+        }
+    }
+
+    impl<T> From<WasmMsg> for CosmosMsg<T> {
+        fn from(msg: WasmMsg) -> Self {
+            CosmosMsg::Wasm(msg)
+        }
+    }
+
     #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum BankMsg {
@@ -350,9 +363,9 @@ pub mod ibc {
         pub amount: u128,
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub struct Empty;
+    pub struct Empty {}
 
     #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -390,6 +403,63 @@ pub mod ibc {
         /// Gas limit measured in [Cosmos SDK gas](https://github.com/CosmWasm/cosmwasm/blob/main/docs/GAS.md).
         pub gas_limit: Option<u64>,
         pub reply_on: ReplyOn,
+    }
+
+    /// This is used for cases when we use ReplyOn::Never and the id doesn't matter
+    pub const UNUSED_MSG_ID: u64 = 0;
+
+    impl<T> SubMsg<T> {
+        /// new creates a "fire and forget" message with the pre-0.14 semantics
+        pub fn new(msg: impl Into<CosmosMsg<T>>) -> Self {
+            SubMsg {
+                id: UNUSED_MSG_ID,
+                msg: msg.into(),
+                reply_on: ReplyOn::Never,
+                gas_limit: None,
+            }
+        }
+
+        /// create a `SubMsg` that will provide a `reply` with the given id if the message returns `Ok`
+        pub fn reply_on_success(msg: impl Into<CosmosMsg<T>>, id: u64) -> Self {
+            Self::reply_on(msg.into(), id, ReplyOn::Success)
+        }
+
+        /// create a `SubMsg` that will provide a `reply` with the given id if the message returns `Err`
+        pub fn reply_on_error(msg: impl Into<CosmosMsg<T>>, id: u64) -> Self {
+            Self::reply_on(msg.into(), id, ReplyOn::Error)
+        }
+
+        /// create a `SubMsg` that will always provide a `reply` with the given id
+        pub fn reply_always(msg: impl Into<CosmosMsg<T>>, id: u64) -> Self {
+            Self::reply_on(msg.into(), id, ReplyOn::Always)
+        }
+
+        /// Add a gas limit to the message.
+        /// This gas limit measured in [Cosmos SDK gas](https://github.com/CosmWasm/cosmwasm/blob/main/docs/GAS.md).
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// # use cosmwasm_std::{coins, BankMsg, ReplyOn, SubMsg};
+        /// # let msg = BankMsg::Send { to_address: String::from("you"), amount: coins(1015, "earth") };
+        /// let sub_msg: SubMsg = SubMsg::reply_always(msg, 1234).with_gas_limit(60_000);
+        /// assert_eq!(sub_msg.id, 1234);
+        /// assert_eq!(sub_msg.gas_limit, Some(60_000));
+        /// assert_eq!(sub_msg.reply_on, ReplyOn::Always);
+        /// ```
+        pub fn with_gas_limit(mut self, limit: u64) -> Self {
+            self.gas_limit = Some(limit);
+            self
+        }
+
+        fn reply_on(msg: CosmosMsg<T>, id: u64, reply_on: ReplyOn) -> Self {
+            SubMsg {
+                id,
+                msg,
+                reply_on,
+                gas_limit: None,
+            }
+        }
     }
 
     #[derive(Decode, Encode)]
@@ -505,6 +575,148 @@ pub mod ibc {
         pub events: Vec<Event>,
     }
 
+    impl<T> Default for IbcReceiveResponse<T> {
+        fn default() -> Self {
+            IbcReceiveResponse {
+                acknowledgement: vec![],
+                messages: vec![],
+                attributes: vec![],
+                events: vec![],
+            }
+        }
+    }
+
+    impl<T> IbcReceiveResponse<T> {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        /// Set the acknowledgement for this response.
+        pub fn set_ack(mut self, ack: impl Into<Vec<u8>>) -> Self {
+            self.acknowledgement = ack.into();
+            self
+        }
+
+        /// Add an attribute included in the main `wasm` event.
+        pub fn add_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+            self.attributes.push(Attribute {
+                key: key.into(),
+                value: value.into(),
+            });
+            self
+        }
+
+        /// This creates a "fire and forget" message, by using `SubMsg::new()` to wrap it,
+        /// and adds it to the list of messages to process.
+        pub fn add_message(mut self, msg: impl Into<CosmosMsg<T>>) -> Self {
+            self.messages.push(SubMsg::new(msg));
+            self
+        }
+
+        /// This takes an explicit SubMsg (creates via eg. `reply_on_error`)
+        /// and adds it to the list of messages to process.
+        pub fn add_submessage(mut self, msg: SubMsg<T>) -> Self {
+            self.messages.push(msg);
+            self
+        }
+
+        /// Adds an extra event to the response, separate from the main `wasm` event
+        /// that is always created.
+        ///
+        /// The `wasm-` prefix will be appended by the runtime to the provided type
+        /// of event.
+        pub fn add_event(mut self, event: Event) -> Self {
+            self.events.push(event);
+            self
+        }
+
+        /// Bulk add attributes included in the main `wasm` event.
+        ///
+        /// Anything that can be turned into an iterator and yields something
+        /// that can be converted into an `Attribute` is accepted.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{attr, IbcReceiveResponse};
+        ///
+        /// let attrs = vec![
+        ///     ("action", "reaction"),
+        ///     ("answer", "42"),
+        ///     ("another", "attribute"),
+        /// ];
+        /// let res: IbcReceiveResponse = IbcReceiveResponse::new().add_attributes(attrs.clone());
+        /// assert_eq!(res.attributes, attrs);
+        /// ```
+        pub fn add_attributes<A: Into<Attribute>>(
+            mut self,
+            attrs: impl IntoIterator<Item = A>,
+        ) -> Self {
+            self.attributes.extend(attrs.into_iter().map(A::into));
+            self
+        }
+
+        /// Bulk add "fire and forget" messages to the list of messages to process.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{CosmosMsg, IbcReceiveResponse};
+        ///
+        /// fn make_response_with_msgs(msgs: Vec<CosmosMsg>) -> IbcReceiveResponse {
+        ///     IbcReceiveResponse::new().add_messages(msgs)
+        /// }
+        /// ```
+        pub fn add_messages<M: Into<CosmosMsg<T>>>(
+            self,
+            msgs: impl IntoIterator<Item = M>,
+        ) -> Self {
+            self.add_submessages(msgs.into_iter().map(SubMsg::new))
+        }
+
+        /// Bulk add explicit SubMsg structs to the list of messages to process.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{SubMsg, IbcReceiveResponse};
+        ///
+        /// fn make_response_with_submsgs(msgs: Vec<SubMsg>) -> IbcReceiveResponse {
+        ///     IbcReceiveResponse::new().add_submessages(msgs)
+        /// }
+        /// ```
+        pub fn add_submessages(mut self, msgs: impl IntoIterator<Item = SubMsg<T>>) -> Self {
+            self.messages.extend(msgs.into_iter());
+            self
+        }
+
+        /// Bulk add custom events to the response. These are separate from the main
+        /// `wasm` event.
+        ///
+        /// The `wasm-` prefix will be appended by the runtime to the provided types
+        /// of events.
+        pub fn add_events(mut self, events: impl IntoIterator<Item = Event>) -> Self {
+            self.events.extend(events.into_iter());
+            self
+        }
+    }
+
+    #[derive(Encode, Decode, Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct Ics20Packet {
+        /// amount of tokens to transfer is encoded as a string, but limited to u64 max
+        pub amount: u128,
+        /// the token denomination to be transferred
+        pub denom: String,
+        /// the recipient address on the destination chain
+        pub receiver: String,
+        /// the sender address
+        pub sender: String,
+        /// optional memo for the IBC transfer
+        //#[serde(skip_serializing_if = "Option::is_none")]
+        pub memo: Option<String>,
+    }
+
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
@@ -512,6 +724,8 @@ pub mod ibc {
         StdError,
         InvalidIbcVersion { version: String },
         OnlyOrderedChannel,
+        ParseError,
+        SerializeError,
     }
 
     /// Defines the storage of your contract.
@@ -583,6 +797,28 @@ pub mod ibc {
         pub fn get(&self) -> bool {
             self.value
         }
+    }
+
+    pub fn from_slice<T: DeserializeOwned>(value: &[u8]) -> Result<T, Error> {
+        serde_json_wasm::from_slice(value).map_err(|_e| Error::ParseError)
+    }
+
+    pub fn from_binary<T: DeserializeOwned>(value: &Vec<u8>) -> Result<T, Error> {
+        from_slice(value.as_slice())
+    }
+
+    pub fn to_vec<T>(data: &T) -> Result<Vec<u8>, Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        serde_json_wasm::to_vec(data).map_err(|_e| Error::SerializeError)
+    }
+
+    pub fn to_binary<T>(data: &T) -> Result<Vec<u8>, Error>
+    where
+        T: Serialize + ?Sized,
+    {
+        to_vec(data)
     }
 
     /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`

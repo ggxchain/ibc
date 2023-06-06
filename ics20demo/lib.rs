@@ -2,10 +2,7 @@
 #![feature(min_specialization)]
 #![feature(default_alloc_error_handler)]
 
-use ink::{
-    env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment},
-    prelude::vec::Vec,
-};
+use ink::env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment};
 
 /// General result type.
 pub type Result<T> = core::result::Result<T, IBCICS20Error>;
@@ -127,14 +124,20 @@ pub mod my_psp22_wrapper {
     use ink::prelude::borrow::ToOwned;
     use ink::prelude::{
         string::{String, ToString},
+        vec,
         vec::Vec,
     };
     use ink::storage::Mapping;
     use openbrush::{contracts::psp22::extensions::wrapper::*, traits::Storage};
     use scale::{Decode, Encode};
 
+    use serde::{Deserialize, Serialize};
+
     pub const ICS20_VERSION: &str = "ics20-1";
     pub const ICS20_ORDERING: IbcOrder = IbcOrder::Unordered;
+
+    const RECEIVE_ID: u64 = 1337;
+    const ACK_FAILURE_ID: u64 = 0xfa17;
 
     #[cfg(feature = "std")]
     use ink::storage::traits::StorageLayout;
@@ -148,13 +151,6 @@ pub mod my_psp22_wrapper {
     pub struct MessageInfo {
         pub sender: Addr,
         pub funds: Vec<Coin>,
-    }
-
-    #[derive(Decode, Encode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub struct Coin {
-        pub denom: String,
-        pub amount: u128,
     }
 
     #[derive(Decode, Encode)]
@@ -399,9 +395,106 @@ pub mod my_psp22_wrapper {
         pub gas_limit: Option<u64>,
     }
 
+    #[derive(Decode, Encode, Default)]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
+    pub struct ChannelState {
+        pub outstanding: u128,
+        pub total_sent: u128,
+    }
+
+    #[derive(Decode, Encode, Deserialize, Serialize)]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
+    pub enum Ics20Ack {
+        Result(Vec<u8>),
+        Error(String),
+    }
+
+    #[derive(Decode, Encode, Serialize, Deserialize)]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
+    pub enum Expiration {
+        /// AtHeight will expire when `env.block.height` >= height
+        AtHeight(u64),
+        /// AtTime will expire when `env.block.time` >= time
+        AtTime(Timestamp),
+        /// Never will never expire. Used to express the empty variant
+        Never {},
+    }
+
+    #[derive(Decode, Encode, Serialize, Deserialize)]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
+    pub enum Cw20ExecuteMsg {
+        /// Transfer is a base message to move tokens to another account without triggering actions
+        Transfer { recipient: String, amount: u128 },
+        /// Burn is a base message to destroy tokens forever
+        Burn { amount: u128 },
+        /// Send is a base message to transfer tokens to a contract and trigger an action
+        /// on the receiving contract.
+        Send {
+            contract: String,
+            amount: u128,
+            msg: Vec<u8>,
+        },
+        /// Only with "approval" extension. Allows spender to access an additional amount tokens
+        /// from the owner's (env.sender) account. If expires is Some(), overwrites current allowance
+        /// expiration with this one.
+        IncreaseAllowance {
+            spender: String,
+            amount: u128,
+            expires: Option<Expiration>,
+        },
+        /// Only with "approval" extension. Lowers the spender's access of tokens
+        /// from the owner's (env.sender) account by amount. If expires is Some(), overwrites current
+        /// allowance expiration with this one.
+        DecreaseAllowance {
+            spender: String,
+            amount: u128,
+            expires: Option<Expiration>,
+        },
+        /// Only with "approval" extension. Transfers amount tokens from owner -> recipient
+        /// if `env.sender` has sufficient pre-approval.
+        TransferFrom {
+            owner: String,
+            recipient: String,
+            amount: u128,
+        },
+        /// Only with "approval" extension. Sends amount tokens from owner -> contract
+        /// if `env.sender` has sufficient pre-approval.
+        SendFrom {
+            owner: String,
+            contract: String,
+            amount: u128,
+            msg: Vec<u8>,
+        },
+        /// Only with "approval" extension. Destroys tokens forever
+        BurnFrom { owner: String, amount: u128 },
+        /// Only with the "mintable" extension. If authorized, creates amount new tokens
+        /// and adds to the recipient balance.
+        Mint { recipient: String, amount: u128 },
+        /// Only with the "mintable" extension. The current minter may set
+        /// a new minter. Setting the minter to None will remove the
+        /// token's minter forever.
+        UpdateMinter { new_minter: Option<String> },
+        /// Only with the "marketing" extension. If authorized, updates marketing metadata.
+        /// Setting None/null for any of these will leave it unchanged.
+        /// Setting Some("") will clear this field on the contract storage
+        UpdateMarketing {
+            /// A URL pointing to the project behind this token.
+            project: Option<String>,
+            /// A longer description of the token and it's utility. Designed for tooltips or such
+            description: Option<String>,
+            /// The address (if any) who can update this data structure
+            marketing: Option<String>,
+        },
+        // /// If set as the "marketing" role on the contract, upload a new URL, SVG, or PNG for the token
+        //UploadLogo(Logo),
+    }
+
     #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
+        /// IBCError
+        IBCError(ibc::ibc::Error),
+
         /// StdError
         StdError,
 
@@ -470,11 +563,11 @@ pub mod my_psp22_wrapper {
         /// isc20_config
         config: Config,
         /// Used to pass info from the ibc_packet_receive to the reply handler
-        replay_args: ReplyArgs,
+        reply_args: ReplyArgs,
         /// static info on one channel that doesn't change
         channel_info: Mapping<String, ChannelInfo>,
         /// indexed by (channel_id, denom) maintaining the balance of the channel in that currency
-        channel_state: Mapping<String, String>,
+        channel_state: Mapping<(String, String), ChannelState>,
         /// Every cw20 contract we allow to be sent is stored here, possibly with a gas_limit
         allow_list: Mapping<Addr, AllowInfo>,
     }
@@ -583,7 +676,7 @@ pub mod my_psp22_wrapper {
                 counterparty_endpoint: channel.counterparty_endpoint,
                 connection_id: channel.connection_id,
             };
-            self.channel_info.insert(&info.id, &info);
+            self.channel_info.insert(&*info.id, &info);
 
             Ok(IbcBasicResponse {
                 messages: Vec::new(),
@@ -658,29 +751,6 @@ pub mod my_psp22_wrapper {
         #[ink(message)]
         pub fn recover(&mut self) -> Result<Balance, PSP22Error> {
             self._recover(Self::env().caller())
-        }
-
-        fn enforce_order_and_version(
-            &self,
-            channel: IbcChannel,
-            counterparty_version: Option<&str>,
-        ) -> Result<(), ibc::ibc::Error> {
-            if channel.version != ICS20_VERSION {
-                return Err(ibc::ibc::Error::InvalidIbcVersion {
-                    version: channel.version.clone(),
-                });
-            }
-            if let Some(version) = counterparty_version {
-                if version != ICS20_VERSION {
-                    return Err(ibc::ibc::Error::InvalidIbcVersion {
-                        version: version.to_string(),
-                    });
-                }
-            }
-            if channel.order != ICS20_ORDERING {
-                return Err(ibc::ibc::Error::OnlyOrderedChannel {});
-            }
-            Ok(())
         }
 
         /// execute spec set function  for ExecuteMsg
@@ -830,6 +900,178 @@ pub mod my_psp22_wrapper {
         #[ink(message)]
         pub fn query_admin(&self) -> Option<Addr> {
             Some(Addr("".to_string()))
+        }
+
+        fn enforce_order_and_version(
+            &self,
+            channel: IbcChannel,
+            counterparty_version: Option<&str>,
+        ) -> Result<(), ibc::ibc::Error> {
+            if channel.version != ICS20_VERSION {
+                return Err(ibc::ibc::Error::InvalidIbcVersion {
+                    version: channel.version.clone(),
+                });
+            }
+            if let Some(version) = counterparty_version {
+                if version != ICS20_VERSION {
+                    return Err(ibc::ibc::Error::InvalidIbcVersion {
+                        version: version.to_string(),
+                    });
+                }
+            }
+            if channel.order != ICS20_ORDERING {
+                return Err(ibc::ibc::Error::OnlyOrderedChannel {});
+            }
+            Ok(())
+        }
+
+        fn do_ibc_packet_receive(
+            &mut self,
+            //deps: DepsMut,
+            packet: &IbcPacket,
+        ) -> Result<IbcReceiveResponse<Vec<u8>>, Error> {
+            let msg: ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
+                Ok(v) => v,
+                Err(e) => return Err(Error::IBCError(e)),
+            };
+            let channel = packet.dest.channel_id.clone();
+
+            // If the token originated on the remote chain, it looks like "ucosm".
+            // If it originated on our chain, it looks like "port/channel/ucosm".
+            let denom = self.parse_voucher_denom(&msg.denom, &packet.src)?;
+
+            // make sure we have enough balance for this
+            self.reduce_channel_balance(&channel, denom, msg.amount)?;
+
+            // we need to save the data to update the balances in reply
+            let reply_args = ReplyArgs {
+                channel,
+                denom: denom.to_string(),
+                amount: msg.amount,
+            };
+            self.reply_args = reply_args;
+
+            let to_send = Amount::from_parts(denom.to_string(), msg.amount);
+            let gas_limit = 0;
+            let send = self.send_amount(to_send, msg.receiver.clone());
+            let mut submsg = SubMsg::reply_on_error(send, RECEIVE_ID);
+            submsg.gas_limit = Some(gas_limit);
+
+            let res = IbcReceiveResponse::new()
+                .set_ack(self.ack_success())
+                .add_submessage(submsg)
+                .add_attribute("action", "receive")
+                .add_attribute("sender", msg.sender)
+                .add_attribute("receiver", msg.receiver)
+                .add_attribute("denom", denom)
+                .add_attribute("amount", msg.amount.to_string())
+                .add_attribute("success", "true");
+
+            Ok(res)
+        }
+
+        pub fn increase_channel_balance(
+            &mut self,
+            channel: &str,
+            denom: &str,
+            amount: u128,
+        ) -> Result<(), Error> {
+            let mut state = self.channel_state.get((channel, denom)).unwrap_or_default();
+            state.outstanding += amount;
+            state.total_sent += amount;
+
+            self.channel_state.insert((channel, denom), &state);
+            Ok(())
+        }
+
+        pub fn reduce_channel_balance(
+            &mut self,
+            channel: &str,
+            denom: &str,
+            amount: u128,
+        ) -> Result<(), Error> {
+            let mut state = self.channel_state.get((channel, denom)).unwrap_or_default();
+            state.outstanding = state
+                .outstanding
+                .checked_sub(amount)
+                .expect("InsufficientFunds.");
+
+            self.channel_state.insert((channel, denom), &state);
+            Ok(())
+        }
+
+        // this is like increase, but it only "un-subtracts" (= adds) outstanding, not total_sent
+        // calling `reduce_channel_balance` and then `undo_reduce_channel_balance` should leave state unchanged.
+        pub fn undo_reduce_channel_balance(
+            &mut self,
+            channel: &str,
+            denom: &str,
+            amount: u128,
+        ) -> Result<(), Error> {
+            let mut state = self.channel_state.get((channel, denom)).unwrap_or_default();
+            state.outstanding += amount;
+
+            self.channel_state.insert((channel, denom), &state);
+            Ok(())
+        }
+
+        fn parse_voucher_denom<'a>(
+            &self,
+            voucher_denom: &'a str,
+            remote_endpoint: &IbcEndpoint,
+        ) -> Result<&'a str, Error> {
+            let split_denom: Vec<&str> = voucher_denom.splitn(3, '/').collect();
+            if split_denom.len() != 3 {
+                return Err(Error::NoForeignTokens {});
+            }
+            // a few more sanity checks
+            if split_denom[0] != remote_endpoint.port_id {
+                return Err(Error::FromOtherPort {
+                    port: split_denom[0].into(),
+                });
+            }
+            if split_denom[1] != remote_endpoint.channel_id {
+                return Err(Error::FromOtherChannel {
+                    channel: split_denom[1].into(),
+                });
+            }
+
+            Ok(split_denom[2])
+        }
+
+        // create a serialized success message
+        fn ack_success(&self) -> Vec<u8> {
+            let res = Ics20Ack::Result(vec![0x1]);
+            ibc::ibc::to_binary(&res).unwrap()
+        }
+
+        // create a serialized error message
+        fn ack_fail(&self, err: String) -> Vec<u8> {
+            let res = Ics20Ack::Error(err);
+            ibc::ibc::to_binary(&res).unwrap()
+        }
+
+        fn send_amount(&self, amount: Amount, recipient: String) -> CosmosMsg<Vec<u8>> {
+            match amount {
+                Amount::Native(coin) => BankMsg::Send {
+                    to_address: recipient,
+                    amount: vec![coin],
+                }
+                .into(),
+                Amount::Cw20(coin) => {
+                    // todo warp for psp22
+                    let msg = Cw20ExecuteMsg::Transfer {
+                        recipient,
+                        amount: coin.amount,
+                    };
+                    WasmMsg::Execute {
+                        contract_addr: coin.address,
+                        msg: to_binary(&msg).unwrap(),
+                        funds: vec![],
+                    }
+                    .into()
+                }
+            }
         }
     }
 }
