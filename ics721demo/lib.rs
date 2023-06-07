@@ -13,10 +13,6 @@ mod ics721demo {
 
     #[derive(Decode, Encode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub struct Addr(String);
-
-    #[derive(Decode, Encode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct TokenId(String);
 
     /// A token according to the ICS-721 spec.
@@ -445,7 +441,7 @@ mod ics721demo {
     impl BaseIbc for Ics721demo {
         // ibc base function
         #[ink(message)]
-        fn reply(&self, reply: Reply) -> Result<Response, ibc::ibc::Error> {
+        fn reply(&mut self, reply: Reply) -> Result<Response, ibc::ibc::Error> {
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
@@ -498,7 +494,7 @@ mod ics721demo {
 
         #[ink(message)]
         fn ibc_packet_receive(
-            &self,
+            &mut self,
             msg: IbcPacketReceiveMsg,
         ) -> Result<IbcReceiveResponse, ibc::ibc::Error> {
             Ok(IbcReceiveResponse {
@@ -511,7 +507,7 @@ mod ics721demo {
 
         #[ink(message)]
         fn ibc_packet_ack(
-            &self,
+            &mut self,
             _msg: IbcPacketAckMsg,
         ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
             Ok(IbcBasicResponse {
@@ -523,7 +519,7 @@ mod ics721demo {
 
         #[ink(message)]
         fn ibc_packet_timeout(
-            &self,
+            &mut self,
             _msg: IbcPacketTimeoutMsg,
         ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
             Ok(IbcBasicResponse {

@@ -5,9 +5,9 @@ In order to enable IBC communication, a contract must expose the following 6 ent
         fn ibc_channel_open(&self, msg: IbcChannelOpenMsg) ->  Result<IbcChannelOpenResponse, Error>;
         fn ibc_channel_connect(&mut self, msg: IbcChannelConnectMsg) ->  Result<IbcBasicResponse, Error>;
         fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) ->  Result<IbcBasicResponse, Error>;
-        fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg) -> Result<IbcReceiveResponse, Error>;
-        fn ibc_packet_ack(&self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
-        fn ibc_packet_timeout(&self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_receive(&mut self, msg: IbcPacketReceiveMsg) -> Result<IbcReceiveResponse, Error>;
+        fn ibc_packet_ack(&mut self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_timeout(&mut self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
 ```
 
 ## 1.1 Channel lifecycle management
@@ -19,7 +19,7 @@ In order to enable IBC communication, a contract must expose the following 6 ent
 ### the ink! interface
 ```js
         /// support submessage callbacks //for developer submessage
-        fn reply(&self, reply: Reply) ->  Result<Response, Error>;
+        fn reply(&mut self, reply: Reply) ->  Result<Response, Error>;
 
         /// in-place contract migrations //for contract upgrade
         fn migrate(&self, _msg: Empty) ->  Result<Response, Error>;
@@ -34,14 +34,14 @@ In order to enable IBC communication, a contract must expose the following 6 ent
         fn ibc_channel_close(&self, msg: IbcChannelCloseMsg) ->  Result<IbcBasicResponse, Error>;
 
         /// After a contract on chain A sends a packet, it is generally processed by the contract on chain B on the other side of the channel. This is done by executing the following entry point on chain B:
-        fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg)
+        fn ibc_packet_receive(&mut self, msg: IbcPacketReceiveMsg)
             -> Result<IbcReceiveResponse, Error>;
 
         /// If chain B successfully received the packet (even if the contract returned an error message), chain A will eventually get an acknowledgement:
-        fn ibc_packet_ack(&self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_ack(&mut self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
 
         /// If the packet was not received on chain B before the timeout, we can be certain that it will never be processed there. In such a case, a relayer can return a timeout proof to cancel the pending packet. In such a case the calling contract will never get ibc_packet_ack, but rather ibc_packet_timeout. One of the two calls will eventually get called for each packet that is sent as long as there is a functioning relayer. (In the absence of a functioning relayer, it will never get a response).
-        fn ibc_packet_timeout(&self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_timeout(&mut self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
 ```
 
 ## 1.3 open channel
@@ -71,14 +71,14 @@ In order to enable IBC communication, a contract must expose the following 6 ent
 ## 1.7 receiving a packet
 ```js
     /// After a contract on chain A sends a packet, it is generally processed by the contract on chain B on the other side of the channel. This is done by executing the following entry point on chain B:
-    fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg)
+    fn ibc_packet_receive(&mut self, msg: IbcPacketReceiveMsg)
         -> Result<IbcReceiveResponse, Error>;
 ```
 
 ## 1.8 error handing
 ```js
 // 1.8.1  If the message doesn't modify any state directly, capture errors, converting them into error acknowledgements
-fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg)-> Result<IbcReceiveResponse, Error> {
+fn ibc_packet_receive(&mut self, msg: IbcPacketReceiveMsg)-> Result<IbcReceiveResponse, Error> {
  (|| {
         // which local channel did this packet come on
         let packet = msg.packet;
@@ -134,7 +134,7 @@ fn receive_dispatch(
     })
 }
 
-pub fn reply(&self, reply: Reply) -> Response {
+pub fn reply(&mut self, reply: Reply) -> Response {
    match (reply.id, reply.result) {
       (RECEIVE_DISPATCH_ID, ContractResult::Err(err)) => Ok(Response {
          data: Some(encode_ibc_error(err)),
@@ -183,13 +183,13 @@ fn ack_fail(err: String) -> Vec<u8> {
 ## 1.10 acknowledgement handing
 ```js
         /// If chain B successfully received the packet (even if the contract returned an error message), chain A will eventually get an acknowledgement:
-        fn ibc_packet_ack(&self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_ack(&mut self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
 ```
 
 ## 1.11 handing timeouts
 ```js
         /// If the packet was not received on chain B before the timeout, we can be certain that it will never be processed there. In such a case, a relayer can return a timeout proof to cancel the pending packet. In such a case the calling contract will never get ibc_packet_ack, but rather ibc_packet_timeout. One of the two calls will eventually get called for each packet that is sent as long as there is a functioning relayer. (In the absence of a functioning relayer, it will never get a response).
-        fn ibc_packet_timeout(&self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_timeout(&mut self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
 ```
 
 ## the ibc struct
@@ -504,7 +504,7 @@ fn ack_fail(err: String) -> Vec<u8> {
         pub amount: u128,
     }
 
-    pub struct Empty;
+    pub struct Empty {}
 
     pub struct Response<T = Empty> {
         /// Optional list of messages to pass. These will be executed in order.

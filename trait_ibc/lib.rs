@@ -10,7 +10,7 @@ pub mod ibc {
     #[cfg(feature = "std")]
     use ink::storage::traits::StorageLayout;
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Default, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Addr(String);
 
@@ -42,14 +42,14 @@ pub mod ibc {
         pub timeout: IbcTimeout,
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct IbcTimeout {
         block: Option<IbcTimeoutBlock>,
         timestamp: Option<Timestamp>,
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct IbcTimeoutBlock {
         /// the version that the client is currently on
@@ -175,7 +175,7 @@ pub mod ibc {
         pub relayer: Addr,
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum CosmosMsg<T> {
         Bank(BankMsg),
@@ -212,7 +212,7 @@ pub mod ibc {
         }
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum BankMsg {
         /// Sends native tokens from the contract to the given address.
@@ -229,7 +229,7 @@ pub mod ibc {
         Burn { amount: Vec<Coin> },
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum StakingMsg {
         /// This is translated to a [MsgDelegate](https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/cosmos/staking/v1beta1/tx.proto#L81-L90).
@@ -247,7 +247,7 @@ pub mod ibc {
         },
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum DistributionMsg {
         /// This is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
@@ -264,7 +264,7 @@ pub mod ibc {
         },
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum WasmMsg {
         /// Dispatches a call to another contract at a known address (with known ABI).
@@ -323,7 +323,7 @@ pub mod ibc {
         ClearAdmin { contract_addr: String },
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum IbcMsg {
         /// Sends bank tokens owned by the contract to the given address on another chain.
@@ -356,7 +356,7 @@ pub mod ibc {
         CloseChannel { channel_id: String },
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Coin {
         pub denom: String,
@@ -393,7 +393,158 @@ pub mod ibc {
         pub data: Option<Vec<u8>>,
     }
 
-    #[derive(Decode, Encode)]
+    impl<T> Default for Response<T> {
+        fn default() -> Self {
+            Response {
+                messages: vec![],
+                attributes: vec![],
+                events: vec![],
+                data: None,
+            }
+        }
+    }
+
+    impl<T> Response<T> {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        /// Add an attribute included in the main `wasm` event.
+        ///
+        /// For working with optional values or optional attributes, see [`add_attributes`][Self::add_attributes].
+        pub fn add_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+            self.attributes.push(Attribute {
+                key: key.into(),
+                value: value.into(),
+            });
+            self
+        }
+
+        /// This creates a "fire and forget" message, by using `SubMsg::new()` to wrap it,
+        /// and adds it to the list of messages to process.
+        pub fn add_message(mut self, msg: impl Into<CosmosMsg<T>>) -> Self {
+            self.messages.push(SubMsg::new(msg));
+            self
+        }
+
+        /// This takes an explicit SubMsg (creates via eg. `reply_on_error`)
+        /// and adds it to the list of messages to process.
+        pub fn add_submessage(mut self, msg: SubMsg<T>) -> Self {
+            self.messages.push(msg);
+            self
+        }
+
+        /// Adds an extra event to the response, separate from the main `wasm` event
+        /// that is always created.
+        ///
+        /// The `wasm-` prefix will be appended by the runtime to the provided type
+        /// of event.
+        pub fn add_event(mut self, event: Event) -> Self {
+            self.events.push(event);
+            self
+        }
+
+        /// Bulk add attributes included in the main `wasm` event.
+        ///
+        /// Anything that can be turned into an iterator and yields something
+        /// that can be converted into an `Attribute` is accepted.
+        ///
+        /// ## Examples
+        ///
+        /// Adding a list of attributes using the pair notation for key and value:
+        ///
+        /// ```
+        /// use cosmwasm_std::Response;
+        ///
+        /// let attrs = vec![
+        ///     ("action", "reaction"),
+        ///     ("answer", "42"),
+        ///     ("another", "attribute"),
+        /// ];
+        /// let res: Response = Response::new().add_attributes(attrs.clone());
+        /// assert_eq!(res.attributes, attrs);
+        /// ```
+        ///
+        /// Adding an optional value as an optional attribute by turning it into a list of 0 or 1 elements:
+        ///
+        /// ```
+        /// use cosmwasm_std::{Attribute, Response};
+        ///
+        /// // Some value
+        /// let value: Option<String> = Some("sarah".to_string());
+        /// let attribute: Option<Attribute> = value.map(|v| Attribute::new("winner", v));
+        /// let res: Response = Response::new().add_attributes(attribute);
+        /// assert_eq!(res.attributes, [Attribute {
+        ///     key: "winner".to_string(),
+        ///     value: "sarah".to_string(),
+        /// }]);
+        ///
+        /// // No value
+        /// let value: Option<String> = None;
+        /// let attribute: Option<Attribute> = value.map(|v| Attribute::new("winner", v));
+        /// let res: Response = Response::new().add_attributes(attribute);
+        /// assert_eq!(res.attributes.len(), 0);
+        /// ```
+        pub fn add_attributes<A: Into<Attribute>>(
+            mut self,
+            attrs: impl IntoIterator<Item = A>,
+        ) -> Self {
+            self.attributes.extend(attrs.into_iter().map(A::into));
+            self
+        }
+
+        /// Bulk add "fire and forget" messages to the list of messages to process.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{CosmosMsg, Response};
+        ///
+        /// fn make_response_with_msgs(msgs: Vec<CosmosMsg>) -> Response {
+        ///     Response::new().add_messages(msgs)
+        /// }
+        /// ```
+        pub fn add_messages<M: Into<CosmosMsg<T>>>(
+            self,
+            msgs: impl IntoIterator<Item = M>,
+        ) -> Self {
+            self.add_submessages(msgs.into_iter().map(SubMsg::new))
+        }
+
+        /// Bulk add explicit SubMsg structs to the list of messages to process.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{SubMsg, Response};
+        ///
+        /// fn make_response_with_submsgs(msgs: Vec<SubMsg>) -> Response {
+        ///     Response::new().add_submessages(msgs)
+        /// }
+        /// ```
+        pub fn add_submessages(mut self, msgs: impl IntoIterator<Item = SubMsg<T>>) -> Self {
+            self.messages.extend(msgs.into_iter());
+            self
+        }
+
+        /// Bulk add custom events to the response. These are separate from the main
+        /// `wasm` event.
+        ///
+        /// The `wasm-` prefix will be appended by the runtime to the provided types
+        /// of events.
+        pub fn add_events(mut self, events: impl IntoIterator<Item = Event>) -> Self {
+            self.events.extend(events.into_iter());
+            self
+        }
+
+        /// Set the binary data included in the response.
+        pub fn set_data(mut self, data: impl Into<Vec<u8>>) -> Self {
+            self.data = Some(data.into());
+            self
+        }
+    }
+
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct SubMsg<T = Empty> {
         /// An arbitrary ID chosen by the contract.
@@ -462,7 +613,7 @@ pub mod ibc {
         }
     }
 
-    #[derive(Decode, Encode)]
+    #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum ReplyOn {
         /// Always perform a callback after SubMsg is processed
@@ -547,6 +698,126 @@ pub mod ibc {
         ///
         /// [*Cosmos SDK* docs]: https://docs.cosmos.network/v0.42/core/events.html
         pub events: Vec<Event>,
+    }
+
+    // Custom imlementation in order to implement it for all `T`, even if `T` is not `Default`.
+    impl<T> Default for IbcBasicResponse<T> {
+        fn default() -> Self {
+            IbcBasicResponse {
+                messages: vec![],
+                attributes: vec![],
+                events: vec![],
+            }
+        }
+    }
+
+    impl<T> IbcBasicResponse<T> {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        /// Add an attribute included in the main `wasm` event.
+        pub fn add_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+            self.attributes.push(Attribute {
+                key: key.into(),
+                value: value.into(),
+            });
+            self
+        }
+
+        /// This creates a "fire and forget" message, by using `SubMsg::new()` to wrap it,
+        /// and adds it to the list of messages to process.
+        pub fn add_message(mut self, msg: impl Into<CosmosMsg<T>>) -> Self {
+            self.messages.push(SubMsg::new(msg));
+            self
+        }
+
+        /// This takes an explicit SubMsg (creates via eg. `reply_on_error`)
+        /// and adds it to the list of messages to process.
+        pub fn add_submessage(mut self, msg: SubMsg<T>) -> Self {
+            self.messages.push(msg);
+            self
+        }
+
+        /// Adds an extra event to the response, separate from the main `wasm` event
+        /// that is always created.
+        ///
+        /// The `wasm-` prefix will be appended by the runtime to the provided type
+        /// of event.
+        pub fn add_event(mut self, event: Event) -> Self {
+            self.events.push(event);
+            self
+        }
+
+        /// Bulk add attributes included in the main `wasm` event.
+        ///
+        /// Anything that can be turned into an iterator and yields something
+        /// that can be converted into an `Attribute` is accepted.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{attr, IbcBasicResponse};
+        ///
+        /// let attrs = vec![
+        ///     ("action", "reaction"),
+        ///     ("answer", "42"),
+        ///     ("another", "attribute"),
+        /// ];
+        /// let res: IbcBasicResponse = IbcBasicResponse::new().add_attributes(attrs.clone());
+        /// assert_eq!(res.attributes, attrs);
+        /// ```
+        pub fn add_attributes<A: Into<Attribute>>(
+            mut self,
+            attrs: impl IntoIterator<Item = A>,
+        ) -> Self {
+            self.attributes.extend(attrs.into_iter().map(A::into));
+            self
+        }
+
+        /// Bulk add "fire and forget" messages to the list of messages to process.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{CosmosMsg, IbcBasicResponse};
+        ///
+        /// fn make_response_with_msgs(msgs: Vec<CosmosMsg>) -> IbcBasicResponse {
+        ///     IbcBasicResponse::new().add_messages(msgs)
+        /// }
+        /// ```
+        pub fn add_messages<M: Into<CosmosMsg<T>>>(
+            self,
+            msgs: impl IntoIterator<Item = M>,
+        ) -> Self {
+            self.add_submessages(msgs.into_iter().map(SubMsg::new))
+        }
+
+        /// Bulk add explicit SubMsg structs to the list of messages to process.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// use cosmwasm_std::{SubMsg, IbcBasicResponse};
+        ///
+        /// fn make_response_with_submsgs(msgs: Vec<SubMsg>) -> IbcBasicResponse {
+        ///     IbcBasicResponse::new().add_submessages(msgs)
+        /// }
+        /// ```
+        pub fn add_submessages(mut self, msgs: impl IntoIterator<Item = SubMsg<T>>) -> Self {
+            self.messages.extend(msgs.into_iter());
+            self
+        }
+
+        /// Bulk add custom events to the response. These are separate from the main
+        /// `wasm` event.
+        ///
+        /// The `wasm-` prefix will be appended by the runtime to the provided types
+        /// of events.
+        pub fn add_events(mut self, events: impl IntoIterator<Item = Event>) -> Self {
+            self.events.extend(events.into_iter());
+            self
+        }
     }
 
     #[derive(Decode, Encode)]
@@ -722,10 +993,20 @@ pub mod ibc {
     pub enum Error {
         // let thiserror implement From<StdError> for you
         StdError,
-        InvalidIbcVersion { version: String },
+        InvalidIbcVersion {
+            version: String,
+        },
         OnlyOrderedChannel,
         ParseError,
         SerializeError,
+        PacketAckError,
+        TimeoutError,
+        UndoReduceChannelBalanceError,
+
+        /// #[error("Got a submessage reply with unknown id: {id}")]
+        UnknownReplyId {
+            id: u64,
+        },
     }
 
     /// Defines the storage of your contract.
@@ -741,7 +1022,7 @@ pub mod ibc {
     pub trait BaseIbc {
         /// support submessage callbacks
         #[ink(message)]
-        fn reply(&self, reply: Reply) -> Result<Response, Error>;
+        fn reply(&mut self, reply: Reply) -> Result<Response, Error>;
 
         /// in-place contract migrations
         #[ink(message)]
@@ -765,16 +1046,21 @@ pub mod ibc {
 
         /// After a contract on chain A sends a packet, it is generally processed by the contract on chain B on the other side of the channel. This is done by executing the following entry point on chain B:
         #[ink(message)]
-        fn ibc_packet_receive(&self, msg: IbcPacketReceiveMsg)
-            -> Result<IbcReceiveResponse, Error>;
+        fn ibc_packet_receive(
+            &mut self,
+            msg: IbcPacketReceiveMsg,
+        ) -> Result<IbcReceiveResponse, Error>;
 
         /// If chain B successfully received the packet (even if the contract returned an error message), chain A will eventually get an acknowledgement:
         #[ink(message)]
-        fn ibc_packet_ack(&self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_ack(&mut self, _msg: IbcPacketAckMsg) -> Result<IbcBasicResponse, Error>;
 
         /// If the packet was not received on chain B before the timeout, we can be certain that it will never be processed there. In such a case, a relayer can return a timeout proof to cancel the pending packet. In such a case the calling contract will never get ibc_packet_ack, but rather ibc_packet_timeout. One of the two calls will eventually get called for each packet that is sent as long as there is a functioning relayer. (In the absence of a functioning relayer, it will never get a response).
         #[ink(message)]
-        fn ibc_packet_timeout(&self, _msg: IbcPacketTimeoutMsg) -> Result<IbcBasicResponse, Error>;
+        fn ibc_packet_timeout(
+            &mut self,
+            _msg: IbcPacketTimeoutMsg,
+        ) -> Result<IbcBasicResponse, Error>;
     }
 
     impl TraitIbc {
@@ -819,6 +1105,14 @@ pub mod ibc {
         T: Serialize + ?Sized,
     {
         to_vec(data)
+    }
+
+    #[inline]
+    pub fn attr(key: impl Into<String>, value: impl Into<String>) -> Attribute {
+        Attribute {
+            key: key.into(),
+            value: value.into(),
+        }
     }
 
     /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
