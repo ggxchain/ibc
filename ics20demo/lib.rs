@@ -3,6 +3,7 @@
 #![feature(default_alloc_error_handler)]
 
 use ink::env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment};
+use ink::prelude::vec::Vec;
 
 /// General result type.
 pub type Result<T> = core::result::Result<T, IBCICS20Error>;
@@ -17,64 +18,64 @@ pub trait IBCICS20Extension {
     #[ink(extension = 0x20001)]
     fn raw_tranfer(input: [u8; 4096]) -> Result<()>;
 
-    //     // PSP22 Metadata interfaces
+    // PSP22 Metadata interfaces
 
-    //     #[ink(extension = 0x3d26)]
-    //     fn token_name(asset_id: u32) -> Result<Vec<u8>>;
+    #[ink(extension = 0x3d26)]
+    fn token_name(asset_id: u32) -> Result<Vec<u8>>;
 
-    //     #[ink(extension = 0x3420)]
-    //     fn token_symbol(asset_id: u32) -> Result<Vec<u8>>;
+    #[ink(extension = 0x3420)]
+    fn token_symbol(asset_id: u32) -> Result<Vec<u8>>;
 
-    //     #[ink(extension = 0x7271)]
-    //     fn token_decimals(asset_id: u32) -> Result<u8>;
+    #[ink(extension = 0x7271)]
+    fn token_decimals(asset_id: u32) -> Result<u8>;
 
-    //     // PSP22 interface queries
+    // PSP22 interface queries
 
-    //     #[ink(extension = 0x162d)]
-    //     fn total_supply(asset_id: u32) -> Result<DefaultBalance>;
+    #[ink(extension = 0x162d)]
+    fn total_supply(asset_id: u32) -> Result<DefaultBalance>;
 
-    //     #[ink(extension = 0x6568)]
-    //     fn balance_of(asset_id: u32, owner: DefaultAccountId) -> Result<DefaultBalance>;
+    #[ink(extension = 0x6568)]
+    fn balance_of(asset_id: u32, owner: DefaultAccountId) -> Result<DefaultBalance>;
 
-    //     #[ink(extension = 0x4d47)]
-    //     fn allowance(
-    //         asset_id: u32,
-    //         owner: DefaultAccountId,
-    //         spender: DefaultAccountId,
-    //     ) -> Result<DefaultBalance>;
+    #[ink(extension = 0x4d47)]
+    fn allowance(
+        asset_id: u32,
+        owner: DefaultAccountId,
+        spender: DefaultAccountId,
+    ) -> Result<DefaultBalance>;
 
-    //     // PSP22 transfer
-    //     #[ink(extension = 0xdb20)]
-    //     fn transfer(asset_id: u32, to: DefaultAccountId, value: DefaultBalance) -> Result<()>;
+    // PSP22 transfer
+    #[ink(extension = 0xdb20)]
+    fn transfer(asset_id: u32, to: DefaultAccountId, value: DefaultBalance) -> Result<()>;
 
-    //     // PSP22 transfer_from
-    //     #[ink(extension = 0x54b3)]
-    //     fn transfer_from(
-    //         asset_id: u32,
-    //         from: DefaultAccountId,
-    //         to: DefaultAccountId,
-    //         value: DefaultBalance,
-    //     ) -> Result<()>;
+    // PSP22 transfer_from
+    #[ink(extension = 0x54b3)]
+    fn transfer_from(
+        asset_id: u32,
+        from: DefaultAccountId,
+        to: DefaultAccountId,
+        value: DefaultBalance,
+    ) -> Result<()>;
 
-    //     // PSP22 approve
-    //     #[ink(extension = 0xb20f)]
-    //     fn approve(asset_id: u32, spender: DefaultAccountId, value: DefaultBalance) -> Result<()>;
+    // PSP22 approve
+    #[ink(extension = 0xb20f)]
+    fn approve(asset_id: u32, spender: DefaultAccountId, value: DefaultBalance) -> Result<()>;
 
-    //     // PSP22 increase_allowance
-    //     #[ink(extension = 0x96d6)]
-    //     fn increase_allowance(
-    //         asset_id: u32,
-    //         spender: DefaultAccountId,
-    //         value: DefaultBalance,
-    //     ) -> Result<()>;
+    // PSP22 increase_allowance
+    #[ink(extension = 0x96d6)]
+    fn increase_allowance(
+        asset_id: u32,
+        spender: DefaultAccountId,
+        value: DefaultBalance,
+    ) -> Result<()>;
 
-    //     // PSP22 decrease_allowance
-    //     #[ink(extension = 0xfecb)]
-    //     fn decrease_allowance(
-    //         asset_id: u32,
-    //         spender: DefaultAccountId,
-    //         value: DefaultBalance,
-    //     ) -> Result<()>;
+    // PSP22 decrease_allowance
+    #[ink(extension = 0xfecb)]
+    fn decrease_allowance(
+        asset_id: u32,
+        spender: DefaultAccountId,
+        value: DefaultBalance,
+    ) -> Result<()>;
 }
 
 #[derive(scale::Encode, scale::Decode)]
