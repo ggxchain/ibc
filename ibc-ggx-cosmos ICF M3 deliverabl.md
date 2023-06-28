@@ -29,7 +29,7 @@ python 3.10+
 # Clone golden-gate
 git clone https://github.com/GoldenGateGGX/golden-gate.git
 cd golden-gate
-git checkout icf-m3
+git checkout ibc-ink-extension-runtime
 
 # build golden-gate 
 cargo build --release
