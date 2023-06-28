@@ -905,6 +905,13 @@ pub trait PSP22Receiver {
         pub default_gas_limit: Option<u64>,
     }
 
+    pub enum TimeoutHeight {
+    #[codec(index = 0)]
+    Never,
+    #[codec(index = 1)]
+    At(runtime_types::ibc::core::ics02_client::height::Height),
+    }
+
     pub struct TransferMsg {
         /// The local channel to send the packets on
         pub channel: String,

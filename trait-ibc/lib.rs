@@ -14,6 +14,46 @@ pub mod ibc {
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Addr(String);
 
+    impl Addr {
+        /// Creates a new `Addr` instance from the given input without checking the validity
+        /// of the input. Since `Addr` must always contain valid addresses, the caller is
+        /// responsible for ensuring the input is valid.
+        ///
+        /// Use this in cases where the address was validated before or in test code.
+        /// If you see this in contract code, it should most likely be replaced with
+        /// `let checked: Addr = deps.api.addr_humanize(canonical_addr)?`.
+        ///
+        /// ## Examples
+        ///
+        /// ```
+        /// # use cosmwasm_std::{Addr};
+        /// let address = Addr::unchecked("foobar");
+        /// assert_eq!(address, "foobar");
+        /// ```
+        pub fn unchecked(input: impl Into<String>) -> Addr {
+            Addr(input.into())
+        }
+    
+        #[inline]
+        pub fn as_str(&self) -> &str {
+            self.0.as_str()
+        }
+    
+        /// Returns the UTF-8 encoded address string as a byte array.
+        ///
+        /// This is equivalent to `address.as_str().as_bytes()`.
+        #[inline]
+        pub fn as_bytes(&self) -> &[u8] {
+            self.0.as_bytes()
+        }
+    
+        /// Utility for explicit conversion to `String`.
+        #[inline]
+        pub fn into_string(self) -> String {
+            self.0
+        }
+    }
+
     #[derive(Decode, Encode, Clone)]
     #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct IbcEndpoint {

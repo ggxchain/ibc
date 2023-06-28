@@ -18,26 +18,29 @@ pub trait IBCICS20Extension {
     #[ink(extension = 0x20001)]
     fn raw_tranfer(input: [u8; 4096]) -> Result<()>;
 
+    #[ink(extension = 0x20002)]
+    fn raw_tranfer_ex(input: Vec<u8>) -> Result<()>;
+
     // PSP22 Metadata interfaces
 
-    #[ink(extension = 0x3d26)]
+    #[ink(extension = 0x30001)]
     fn token_name(asset_id: u32) -> Result<Vec<u8>>;
 
-    #[ink(extension = 0x3420)]
+    #[ink(extension = 0x30002)]
     fn token_symbol(asset_id: u32) -> Result<Vec<u8>>;
 
-    #[ink(extension = 0x7271)]
+    #[ink(extension = 0x30003)]
     fn token_decimals(asset_id: u32) -> Result<u8>;
 
     // PSP22 interface queries
 
-    #[ink(extension = 0x162d)]
+    #[ink(extension = 0x30004)]
     fn total_supply(asset_id: u32) -> Result<DefaultBalance>;
 
-    #[ink(extension = 0x6568)]
+    #[ink(extension = 0x30005)]
     fn balance_of(asset_id: u32, owner: DefaultAccountId) -> Result<DefaultBalance>;
 
-    #[ink(extension = 0x4d47)]
+    #[ink(extension = 0x30006)]
     fn allowance(
         asset_id: u32,
         owner: DefaultAccountId,
@@ -45,11 +48,11 @@ pub trait IBCICS20Extension {
     ) -> Result<DefaultBalance>;
 
     // PSP22 transfer
-    #[ink(extension = 0xdb20)]
+    #[ink(extension = 0x30007)]
     fn transfer(asset_id: u32, to: DefaultAccountId, value: DefaultBalance) -> Result<()>;
 
     // PSP22 transfer_from
-    #[ink(extension = 0x54b3)]
+    #[ink(extension = 0x30008)]
     fn transfer_from(
         asset_id: u32,
         from: DefaultAccountId,
@@ -58,11 +61,11 @@ pub trait IBCICS20Extension {
     ) -> Result<()>;
 
     // PSP22 approve
-    #[ink(extension = 0xb20f)]
+    #[ink(extension = 0x30009)]
     fn approve(asset_id: u32, spender: DefaultAccountId, value: DefaultBalance) -> Result<()>;
 
     // PSP22 increase_allowance
-    #[ink(extension = 0x96d6)]
+    #[ink(extension = 0x3000a)]
     fn increase_allowance(
         asset_id: u32,
         spender: DefaultAccountId,
@@ -70,7 +73,7 @@ pub trait IBCICS20Extension {
     ) -> Result<()>;
 
     // PSP22 decrease_allowance
-    #[ink(extension = 0xfecb)]
+    #[ink(extension = 0x3000b)]
     fn decrease_allowance(
         asset_id: u32,
         spender: DefaultAccountId,
@@ -120,8 +123,13 @@ impl Environment for IBCDefaultEnvironment {
 
 #[openbrush::contract(env = crate::IBCDefaultEnvironment)]
 pub mod my_psp22_wrapper {
-    use ibc::ibc::*;
+    use core::str::FromStr;
+    use core::time::Duration;
+    use trait_ibc::ibc::*;
 
+    use ibc::core::ics24_host::identifier::ChannelId;
+    use ibc::core::ics24_host::identifier::PortId;
+    use ibc::signer::Signer;
     use ink::prelude::borrow::ToOwned;
     use ink::prelude::{
         string::{String, ToString},
@@ -201,6 +209,32 @@ pub mod my_psp22_wrapper {
         pub timeout: Option<u64>,
         /// An optional memo to add to the IBC transfer
         pub memo: Option<String>,
+    }
+
+    #[derive(Decode, Encode, Clone, Debug, PartialEq, Eq)]
+    pub enum TimeoutHeight {
+        Never,
+        At(ibc::core::ics02_client::height::Height),
+    }
+
+    #[derive(Decode, Encode, Clone, Debug, PartialEq, Eq)]
+    pub struct MsgTransfer<C = Coin> {
+        /// the port on which the packet will be sent
+        pub source_port: PortId,
+        /// the channel by which the packet will be sent
+        pub source_channel: ChannelId,
+        /// the tokens to be transferred
+        pub token: C,
+        /// the sender address
+        pub sender: Signer,
+        /// the recipient address on the destination chain
+        pub receiver: Signer,
+        /// Timeout height relative to the current block height.
+        /// The timeout is disabled when set to None.
+        pub timeout_height: TimeoutHeight,
+        /// Timeout timestamp relative to the current block timestamp.
+        /// The timeout is disabled when set to 0.
+        pub timeout_timestamp: ibc::timestamp::Timestamp,
     }
 
     #[derive(Decode, Encode)]
@@ -411,13 +445,13 @@ pub mod my_psp22_wrapper {
     // create a serialized success message
     fn ack_success() -> Vec<u8> {
         let res = Ics20Ack::Result(vec![0x1]);
-        to_binary(&res).unwrap()
+        trait_ibc::ibc::to_binary(&res).unwrap()
     }
 
     // create a serialized error message
     fn ack_fail(err: String) -> Vec<u8> {
         let res = Ics20Ack::Error(err);
-        to_binary(&res).unwrap()
+        trait_ibc::ibc::to_binary(&res).unwrap()
     }
 
     #[derive(Decode, Encode, Serialize, Deserialize)]
@@ -504,7 +538,7 @@ pub mod my_psp22_wrapper {
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
         /// IBCError
-        IBCError(ibc::ibc::Error),
+        IBCError(trait_ibc::ibc::Error),
 
         /// StdError
         StdError,
@@ -605,7 +639,7 @@ pub mod my_psp22_wrapper {
     impl BaseIbc for Contract {
         // ibc base function
         #[ink(message)]
-        fn reply(&mut self, reply: Reply) -> Result<Response, ibc::ibc::Error> {
+        fn reply(&mut self, reply: Reply) -> Result<Response, trait_ibc::ibc::Error> {
             //todo(smith)
             match reply.id {
                 RECEIVE_ID => match reply.result {
@@ -629,7 +663,7 @@ pub mod my_psp22_wrapper {
                             self.reply_args.amount,
                         ) {
                             Err(_) => {
-                                return Err(ibc::ibc::Error::UndoReduceChannelBalanceError);
+                                return Err(trait_ibc::ibc::Error::UndoReduceChannelBalanceError);
                             }
                             _ => {}
                         };
@@ -641,12 +675,12 @@ pub mod my_psp22_wrapper {
                     SubMsgResult::Ok(_) => Ok(Response::new()),
                     SubMsgResult::Err(err) => Ok(Response::new().set_data(ack_fail(err))),
                 },
-                _ => Err(ibc::ibc::Error::UnknownReplyId { id: reply.id }),
+                _ => Err(trait_ibc::ibc::Error::UnknownReplyId { id: reply.id }),
             }
         }
 
         #[ink(message)]
-        fn migrate(&self, _msg: Empty) -> Result<Response, ibc::ibc::Error> {
+        fn migrate(&self, _msg: Empty) -> Result<Response, trait_ibc::ibc::Error> {
             //todo(smith) with a proxy address
             Ok(Response {
                 messages: Vec::new(),
@@ -660,7 +694,7 @@ pub mod my_psp22_wrapper {
         fn ibc_channel_open(
             &self,
             msg: IbcChannelOpenMsg,
-        ) -> Result<IbcChannelOpenResponse, ibc::ibc::Error> {
+        ) -> Result<IbcChannelOpenResponse, trait_ibc::ibc::Error> {
             let (channel, opt_counterparty_version) = match msg {
                 IbcChannelOpenMsg::OpenInit { channel } => (channel, None),
                 IbcChannelOpenMsg::OpenTry {
@@ -681,7 +715,7 @@ pub mod my_psp22_wrapper {
         fn ibc_channel_connect(
             &mut self,
             msg: IbcChannelConnectMsg,
-        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
             let (channel, opt_counterparty_version) = match msg {
                 IbcChannelConnectMsg::OpenAck {
                     channel,
@@ -713,7 +747,7 @@ pub mod my_psp22_wrapper {
         fn ibc_channel_close(
             &self,
             msg: IbcChannelCloseMsg,
-        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
             // TODO: what to do here?
             // we will have locked funds that need to be returned somehow
             Ok(IbcBasicResponse {
@@ -727,7 +761,7 @@ pub mod my_psp22_wrapper {
         fn ibc_packet_receive(
             &mut self,
             msg: IbcPacketReceiveMsg,
-        ) -> Result<IbcReceiveResponse, ibc::ibc::Error> {
+        ) -> Result<IbcReceiveResponse, trait_ibc::ibc::Error> {
             let packet = msg.packet;
 
             self.do_ibc_packet_receive(&packet).or_else(|err| {
@@ -745,16 +779,16 @@ pub mod my_psp22_wrapper {
         fn ibc_packet_ack(
             &mut self,
             msg: IbcPacketAckMsg,
-        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
             let ics20msg: Ics20Ack = from_binary(&msg.acknowledgement.data)?;
             match ics20msg {
                 Ics20Ack::Result(_) => match self.on_packet_success(msg.original_packet) {
                     Ok(v) => Ok(v),
-                    Err(e) => Err(ibc::ibc::Error::PacketAckError),
+                    Err(e) => Err(trait_ibc::ibc::Error::PacketAckError),
                 },
                 Ics20Ack::Error(err) => match self.on_packet_failure(msg.original_packet, err) {
                     Ok(v) => Ok(v),
-                    Err(e) => Err(ibc::ibc::Error::PacketAckError),
+                    Err(e) => Err(trait_ibc::ibc::Error::PacketAckError),
                 },
             }
         }
@@ -763,7 +797,7 @@ pub mod my_psp22_wrapper {
         fn ibc_packet_timeout(
             &mut self,
             msg: IbcPacketTimeoutMsg,
-        ) -> Result<IbcBasicResponse, ibc::ibc::Error> {
+        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
             // Ok(IbcBasicResponse {
             //     messages: Vec::new(),
             //     attributes: Vec::new(),
@@ -774,7 +808,7 @@ pub mod my_psp22_wrapper {
             let packet = msg.packet;
             match self.on_packet_failure(packet, "timeout".to_string()) {
                 Ok(v) => Ok(v),
-                Err(e) => Err(ibc::ibc::Error::TimeoutError),
+                Err(e) => Err(trait_ibc::ibc::Error::TimeoutError),
             }
         }
     }
@@ -837,7 +871,26 @@ pub mod my_psp22_wrapper {
             amount: Amount,
             sender: Addr,
         ) -> Result<Response, Error> {
-            let rt = self.env().extension().raw_tranfer([0; 4096]);
+            // construct MsgTransfer
+
+            match amount {
+                Amount::Native(coin) => {
+                    let msg = MsgTransfer {
+                        source_port: PortId::transfer(),
+                        source_channel: ChannelId::from_str(&msg.channel).unwrap_or_default(),
+                        token: coin,
+                        sender: Signer::from_str(sender.as_str()).unwrap(),
+                        receiver: Signer::from_str(&msg.remote_address).unwrap(),
+                        timeout_height: TimeoutHeight::Never,
+                        timeout_timestamp: ibc::timestamp::Timestamp::default(),
+                    };
+                    let raw_data = msg.encode();
+
+                    let rt = self.env().extension().raw_tranfer_ex(raw_data);
+                }
+                _ => {}
+            }
+
             Ok(Response {
                 messages: Vec::new(),
                 attributes: Vec::new(),
@@ -958,21 +1011,21 @@ pub mod my_psp22_wrapper {
             &self,
             channel: IbcChannel,
             counterparty_version: Option<&str>,
-        ) -> Result<(), ibc::ibc::Error> {
+        ) -> Result<(), trait_ibc::ibc::Error> {
             if channel.version != ICS20_VERSION {
-                return Err(ibc::ibc::Error::InvalidIbcVersion {
+                return Err(trait_ibc::ibc::Error::InvalidIbcVersion {
                     version: channel.version.clone(),
                 });
             }
             if let Some(version) = counterparty_version {
                 if version != ICS20_VERSION {
-                    return Err(ibc::ibc::Error::InvalidIbcVersion {
+                    return Err(trait_ibc::ibc::Error::InvalidIbcVersion {
                         version: version.to_string(),
                     });
                 }
             }
             if channel.order != ICS20_ORDERING {
-                return Err(ibc::ibc::Error::OnlyOrderedChannel {});
+                return Err(trait_ibc::ibc::Error::OnlyOrderedChannel {});
             }
             Ok(())
         }
@@ -981,7 +1034,7 @@ pub mod my_psp22_wrapper {
             &mut self,
             packet: &IbcPacket,
         ) -> Result<IbcReceiveResponse, Error> {
-            let msg: ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
+            let msg: trait_ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
                 Ok(v) => v,
                 Err(e) => return Err(Error::IBCError(e)),
             };
@@ -1093,18 +1146,18 @@ pub mod my_psp22_wrapper {
         // create a serialized success message
         fn ack_success(&self) -> Vec<u8> {
             let res = Ics20Ack::Result(vec![0x1]);
-            ibc::ibc::to_binary(&res).unwrap()
+            trait_ibc::ibc::to_binary(&res).unwrap()
         }
 
         // create a serialized error message
         fn ack_fail(&self, err: String) -> Vec<u8> {
             let res = Ics20Ack::Error(err);
-            ibc::ibc::to_binary(&res).unwrap()
+            trait_ibc::ibc::to_binary(&res).unwrap()
         }
 
         // update the balance stored on this (channel, denom) index
         fn on_packet_success(&self, packet: IbcPacket) -> Result<IbcBasicResponse, Error> {
-            let msg: ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
+            let msg: trait_ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
                 Ok(v) => v,
                 Err(e) => return Err(Error::IBCError(e)),
             };
@@ -1128,7 +1181,7 @@ pub mod my_psp22_wrapper {
             packet: IbcPacket,
             err: String,
         ) -> Result<IbcBasicResponse, Error> {
-            let msg: ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
+            let msg: trait_ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
                 Ok(v) => v,
                 Err(e) => return Err(Error::IBCError(e)),
             };
@@ -1171,7 +1224,7 @@ pub mod my_psp22_wrapper {
                     };
                     WasmMsg::Execute {
                         contract_addr: coin.address,
-                        msg: to_binary(&msg).unwrap(),
+                        msg: trait_ibc::ibc::to_binary(&msg).unwrap(),
                         funds: vec![],
                     }
                     .into()

@@ -12,8 +12,8 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 
 # These dependencies
 openbrush = { version = "3.1.1", git = "https://github.com/Brushfam/openbrush-contracts", default-features = false, features = ["psp22"] }
-
-ibc = { path = "../trait_ibc", default-features = false, features = ["ink-as-dependency"] }
+trait-ibc = { path = "../trait-ibc", default-features = false, features = ["ink-as-dependency"] }
+ibc = { version = "0.28.0", default-features = false, features = ["parity-scale-codec", "serde"]}
 
 [lib]
 name = "my_psp22_wrapper"
@@ -32,6 +32,7 @@ std = [
     #"serde",
     "scale/std",
     "scale-info/std",
+    "trait-ibc/std"
 ]
 ink-as-dependency = []
 
