@@ -11,7 +11,7 @@ pub mod ibc {
     use ink::storage::traits::StorageLayout;
 
     #[derive(Decode, Encode, Default, Clone)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub struct Addr(String);
 
     impl Addr {
@@ -1126,7 +1126,7 @@ pub mod ibc {
     }
 
     pub fn from_slice<T: DeserializeOwned>(value: &[u8]) -> Result<T, Error> {
-        serde_json_wasm::from_slice(value).map_err(|_e| Error::ParseError)
+        serde_json::from_slice(value).map_err(|_e| Error::ParseError)
     }
 
     pub fn from_binary<T: DeserializeOwned>(value: &Vec<u8>) -> Result<T, Error> {
@@ -1137,7 +1137,7 @@ pub mod ibc {
     where
         T: Serialize + ?Sized,
     {
-        serde_json_wasm::to_vec(data).map_err(|_e| Error::SerializeError)
+        serde_json::to_vec(data).map_err(|_e| Error::SerializeError)
     }
 
     pub fn to_binary<T>(data: &T) -> Result<Vec<u8>, Error>
