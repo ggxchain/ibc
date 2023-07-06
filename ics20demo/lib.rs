@@ -2,6 +2,7 @@
 #![feature(min_specialization)]
 #![feature(default_alloc_error_handler)]
 
+use crate::my_psp22_wrapper::Error;
 use ink::env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment};
 use ink::prelude::vec::Vec;
 
@@ -16,10 +17,15 @@ pub trait IBCICS20Extension {
     type ErrorCode = IBCICS20Error;
 
     #[ink(extension = 0x20001)]
-    fn raw_tranfer(input: [u8; 4096]) -> Result<()>;
-
-    #[ink(extension = 0x20002)]
-    fn raw_tranfer_ex(input: Vec<u8>) -> Result<()>;
+    fn raw_tranfer(
+        source_channel: Vec<u8>,
+        denom: Vec<u8>,
+        amount: Vec<u8>,
+        sender: Vec<u8>,
+        receiver: Vec<u8>,
+        timeout_timestamp: u64,
+        timeout_height: u64,
+    ) -> Result<()>;
 
     // PSP22 Metadata interfaces
 
@@ -137,7 +143,7 @@ pub mod my_psp22_wrapper {
         vec::Vec,
     };
     use ink::storage::Mapping;
-    use openbrush::{contracts::psp22::extensions::wrapper::*, traits::Storage};
+    use openbrush::{contracts::psp22::*, traits::Storage};
     use scale::{Decode, Encode};
 
     use serde::{Deserialize, Serialize};
@@ -601,7 +607,6 @@ pub mod my_psp22_wrapper {
         ChannelTokenDenomNotFound,
     }
 
-    #[cfg(not(feature = "std"))]
     impl core::fmt::Display for Error {
         fn fmt(&self, _f: &mut Formatter<'_>) -> core::fmt::Result {
             Ok(())
@@ -611,10 +616,6 @@ pub mod my_psp22_wrapper {
     #[ink(storage)]
     #[derive(Default, Storage)]
     pub struct Contract {
-        #[storage_field]
-        psp22: psp22::Data,
-        #[storage_field]
-        wrapper: wrapper::Data,
 
         /// contract admin
         admin: Addr,
@@ -632,9 +633,9 @@ pub mod my_psp22_wrapper {
         allow_list: Mapping<Addr, AllowInfo>,
     }
 
-    impl PSP22 for Contract {}
+    // impl PSP22 for Contract {
 
-    impl PSP22Wrapper for Contract {}
+    // }
 
     impl BaseIbc for Contract {
         // ibc base function
@@ -818,15 +819,7 @@ pub mod my_psp22_wrapper {
         pub fn new(token_address: AccountId, msg: InitMsg) -> Self {
             let mut instance = Self::default();
 
-            instance._init(token_address);
-
             instance
-        }
-
-        /// Exposes the `_recover` function for message caller
-        #[ink(message)]
-        pub fn recover(&mut self) -> Result<Balance, PSP22Error> {
-            self._recover(Self::env().caller())
         }
 
         /// execute spec set function  for ExecuteMsg
@@ -875,18 +868,20 @@ pub mod my_psp22_wrapper {
 
             match amount {
                 Amount::Native(coin) => {
-                    let msg = MsgTransfer {
-                        source_port: PortId::transfer(),
-                        source_channel: ChannelId::from_str(&msg.channel).unwrap_or_default(),
-                        token: coin,
-                        sender: Signer::from_str(sender.as_str()).unwrap(),
-                        receiver: Signer::from_str(&msg.remote_address).unwrap(),
-                        timeout_height: TimeoutHeight::Never,
-                        timeout_timestamp: ibc::timestamp::Timestamp::default(),
-                    };
-                    let raw_data = msg.encode();
-
-                    let rt = self.env().extension().raw_tranfer_ex(raw_data);
+                    let source_channel = msg.channel;
+                    let denom = coin.denom;
+                    let amount = coin.amount;
+                    let sender = sender;
+                    let receiver = msg.remote_address;
+                    let rt = self.env().extension().raw_tranfer(
+                        source_channel.into(),
+                        denom.into(),
+                        amount.to_string().into(),
+                        sender.into_string().into(),
+                        receiver.into(),
+                        Default::default(),
+                        Default::default(),
+                    );
                 }
                 _ => {}
             }
