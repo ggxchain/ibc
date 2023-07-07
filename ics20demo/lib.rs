@@ -868,6 +868,7 @@ pub mod my_psp22_wrapper {
 
             match amount {
                 Amount::Native(coin) => {
+                    let timestamp = self.env().block_timestamp() + 60 * 1000; //microsecond
                     let source_channel = msg.channel;
                     let denom = coin.denom;
                     let amount = coin.amount;
@@ -879,7 +880,7 @@ pub mod my_psp22_wrapper {
                         amount.to_string().into(),
                         sender.into_string().into(),
                         receiver.into(),
-                        Default::default(),
+                        timestamp,
                         Default::default(),
                     );
                 }
