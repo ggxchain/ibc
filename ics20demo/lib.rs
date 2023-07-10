@@ -2,7 +2,7 @@
 #![feature(min_specialization)]
 #![feature(default_alloc_error_handler)]
 
-use crate::my_psp22_wrapper::Error;
+use crate::my_psp37_wrapper::Error;
 use ink::env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment};
 use ink::prelude::vec::Vec;
 
@@ -27,63 +27,37 @@ pub trait IBCICS20Extension {
         timeout_height: u64,
     ) -> Result<()>;
 
-    // PSP22 Metadata interfaces
+    // PSP37 interface queries
 
     #[ink(extension = 0x30001)]
-    fn token_name(asset_id: u32) -> Result<Vec<u8>>;
+    fn balance_of(owner: DefaultAccountId, id: Option<u32>) -> Result<DefaultBalance>;
 
     #[ink(extension = 0x30002)]
-    fn token_symbol(asset_id: u32) -> Result<Vec<u8>>;
+    fn total_supply(id: Option<u32>) -> Result<DefaultBalance>;
 
     #[ink(extension = 0x30003)]
-    fn token_decimals(asset_id: u32) -> Result<u8>;
-
-    // PSP22 interface queries
-
-    #[ink(extension = 0x30004)]
-    fn total_supply(asset_id: u32) -> Result<DefaultBalance>;
-
-    #[ink(extension = 0x30005)]
-    fn balance_of(asset_id: u32, owner: DefaultAccountId) -> Result<DefaultBalance>;
-
-    #[ink(extension = 0x30006)]
     fn allowance(
-        asset_id: u32,
         owner: DefaultAccountId,
         spender: DefaultAccountId,
+        id: Option<u32>,
     ) -> Result<DefaultBalance>;
 
-    // PSP22 transfer
-    #[ink(extension = 0x30007)]
-    fn transfer(asset_id: u32, to: DefaultAccountId, value: DefaultBalance) -> Result<()>;
+    // PSP37 approve
+    #[ink(extension = 0x30004)]
+    fn approve(spender: DefaultAccountId, id: Option<u32>, value: DefaultBalance) -> Result<()>;
 
-    // PSP22 transfer_from
-    #[ink(extension = 0x30008)]
+    // PSP37 transfer
+    #[ink(extension = 0x30005)]
+    fn transfer(to: DefaultAccountId, id: u32, value: DefaultBalance, data: Vec<u8>) -> Result<()>;
+
+    // PSP37 transfer_from
+    #[ink(extension = 0x30006)]
     fn transfer_from(
-        asset_id: u32,
         from: DefaultAccountId,
         to: DefaultAccountId,
+        id: u32,
         value: DefaultBalance,
-    ) -> Result<()>;
-
-    // PSP22 approve
-    #[ink(extension = 0x30009)]
-    fn approve(asset_id: u32, spender: DefaultAccountId, value: DefaultBalance) -> Result<()>;
-
-    // PSP22 increase_allowance
-    #[ink(extension = 0x3000a)]
-    fn increase_allowance(
-        asset_id: u32,
-        spender: DefaultAccountId,
-        value: DefaultBalance,
-    ) -> Result<()>;
-
-    // PSP22 decrease_allowance
-    #[ink(extension = 0x3000b)]
-    fn decrease_allowance(
-        asset_id: u32,
-        spender: DefaultAccountId,
-        value: DefaultBalance,
+        data: Vec<u8>,
     ) -> Result<()>;
 }
 
@@ -128,7 +102,7 @@ impl Environment for IBCDefaultEnvironment {
 }
 
 #[openbrush::contract(env = crate::IBCDefaultEnvironment)]
-pub mod my_psp22_wrapper {
+pub mod my_psp37_wrapper {
     use core::str::FromStr;
     use core::time::Duration;
     use trait_ibc::ibc::*;
@@ -143,7 +117,9 @@ pub mod my_psp22_wrapper {
         vec::Vec,
     };
     use ink::storage::Mapping;
-    use openbrush::{contracts::psp22::*, traits::Storage};
+    use openbrush::contracts::psp37::*;
+    use openbrush::traits::Storage;
+
     use scale::{Decode, Encode};
 
     use serde::{Deserialize, Serialize};
@@ -448,18 +424,6 @@ pub mod my_psp22_wrapper {
         Error(String),
     }
 
-    // create a serialized success message
-    fn ack_success() -> Vec<u8> {
-        let res = Ics20Ack::Result(vec![0x1]);
-        trait_ibc::ibc::to_binary(&res).unwrap()
-    }
-
-    // create a serialized error message
-    fn ack_fail(err: String) -> Vec<u8> {
-        let res = Ics20Ack::Error(err);
-        trait_ibc::ibc::to_binary(&res).unwrap()
-    }
-
     #[derive(Decode, Encode, Serialize, Deserialize)]
     #[cfg_attr(feature = "std", derive(StorageLayout, scale_info::TypeInfo))]
     pub enum Expiration {
@@ -616,7 +580,6 @@ pub mod my_psp22_wrapper {
     #[ink(storage)]
     #[derive(Default, Storage)]
     pub struct Contract {
-
         /// contract admin
         admin: Addr,
         /// isc20_config
@@ -633,191 +596,12 @@ pub mod my_psp22_wrapper {
         allow_list: Mapping<Addr, AllowInfo>,
     }
 
-    // impl PSP22 for Contract {
-
-    // }
-
-    impl BaseIbc for Contract {
-        // ibc base function
-        #[ink(message)]
-        fn reply(&mut self, reply: Reply) -> Result<Response, trait_ibc::ibc::Error> {
-            //todo(smith)
-            match reply.id {
-                RECEIVE_ID => match reply.result {
-                    SubMsgResult::Ok(_) => Ok(Response::new()),
-                    SubMsgResult::Err(err) => {
-                        // Important design note:  with ibcv2 and wasmd 0.22 we can implement this all much easier.
-                        // No reply needed... the receive function and submessage should return error on failure and all
-                        // state gets reverted with a proper app-level message auto-generated
-
-                        // Since we need compatibility with Juno (Jan 2022), we need to ensure that optimisitic
-                        // state updates in ibc_packet_receive get reverted in the (unlikely) chance of an
-                        // error while sending the token
-
-                        // However, this requires passing some state between the ibc_packet_receive function and
-                        // the reply handler. We do this with a singleton, with is "okay" for IBC as there is no
-                        // reentrancy on these functions (cannot be called by another contract). This pattern
-                        // should not be used for ExecuteMsg handlers
-                        match self.undo_reduce_channel_balance(
-                            self.reply_args.channel.clone().as_str(),
-                            self.reply_args.denom.clone().as_str(),
-                            self.reply_args.amount,
-                        ) {
-                            Err(_) => {
-                                return Err(trait_ibc::ibc::Error::UndoReduceChannelBalanceError);
-                            }
-                            _ => {}
-                        };
-
-                        return Ok(Response::new().set_data(ack_fail(err)));
-                    }
-                },
-                ACK_FAILURE_ID => match reply.result {
-                    SubMsgResult::Ok(_) => Ok(Response::new()),
-                    SubMsgResult::Err(err) => Ok(Response::new().set_data(ack_fail(err))),
-                },
-                _ => Err(trait_ibc::ibc::Error::UnknownReplyId { id: reply.id }),
-            }
-        }
-
-        #[ink(message)]
-        fn migrate(&self, _msg: Empty) -> Result<Response, trait_ibc::ibc::Error> {
-            //todo(smith) with a proxy address
-            Ok(Response {
-                messages: Vec::new(),
-                attributes: Vec::new(),
-                events: Vec::new(),
-                data: None,
-            })
-        }
-
-        #[ink(message)]
-        fn ibc_channel_open(
-            &self,
-            msg: IbcChannelOpenMsg,
-        ) -> Result<IbcChannelOpenResponse, trait_ibc::ibc::Error> {
-            let (channel, opt_counterparty_version) = match msg {
-                IbcChannelOpenMsg::OpenInit { channel } => (channel, None),
-                IbcChannelOpenMsg::OpenTry {
-                    channel,
-                    counterparty_version,
-                } => (channel, Some(counterparty_version)),
-            };
-
-            let _ = self.enforce_order_and_version(
-                channel,
-                opt_counterparty_version.as_ref().map(AsRef::as_ref),
-            )?;
-
-            Ok(())
-        }
-
-        #[ink(message)]
-        fn ibc_channel_connect(
-            &mut self,
-            msg: IbcChannelConnectMsg,
-        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
-            let (channel, opt_counterparty_version) = match msg {
-                IbcChannelConnectMsg::OpenAck {
-                    channel,
-                    counterparty_version,
-                } => (channel, Some(counterparty_version)),
-                IbcChannelConnectMsg::OpenConfirm { channel } => (channel, None),
-            };
-
-            let _ = self.enforce_order_and_version(
-                channel.clone(),
-                opt_counterparty_version.as_deref().map(AsRef::as_ref),
-            )?;
-
-            let info = ChannelInfo {
-                id: channel.endpoint.channel_id,
-                counterparty_endpoint: channel.counterparty_endpoint,
-                connection_id: channel.connection_id,
-            };
-            self.channel_info.insert(&*info.id, &info);
-
-            Ok(IbcBasicResponse {
-                messages: Vec::new(),
-                attributes: Vec::new(),
-                events: Vec::new(),
-            })
-        }
-
-        #[ink(message)]
-        fn ibc_channel_close(
-            &self,
-            msg: IbcChannelCloseMsg,
-        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
-            // TODO: what to do here?
-            // we will have locked funds that need to be returned somehow
-            Ok(IbcBasicResponse {
-                messages: Vec::new(),
-                attributes: Vec::new(),
-                events: Vec::new(),
-            })
-        }
-
-        #[ink(message)]
-        fn ibc_packet_receive(
-            &mut self,
-            msg: IbcPacketReceiveMsg,
-        ) -> Result<IbcReceiveResponse, trait_ibc::ibc::Error> {
-            let packet = msg.packet;
-
-            self.do_ibc_packet_receive(&packet).or_else(|err| {
-                Ok(IbcReceiveResponse::new()
-                    .set_ack(ack_fail(err.to_string()))
-                    .add_attributes(vec![
-                        attr("action", "receive"),
-                        attr("success", "false"),
-                        attr("error", err.to_string()),
-                    ]))
-            })
-        }
-
-        #[ink(message)]
-        fn ibc_packet_ack(
-            &mut self,
-            msg: IbcPacketAckMsg,
-        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
-            let ics20msg: Ics20Ack = from_binary(&msg.acknowledgement.data)?;
-            match ics20msg {
-                Ics20Ack::Result(_) => match self.on_packet_success(msg.original_packet) {
-                    Ok(v) => Ok(v),
-                    Err(e) => Err(trait_ibc::ibc::Error::PacketAckError),
-                },
-                Ics20Ack::Error(err) => match self.on_packet_failure(msg.original_packet, err) {
-                    Ok(v) => Ok(v),
-                    Err(e) => Err(trait_ibc::ibc::Error::PacketAckError),
-                },
-            }
-        }
-
-        #[ink(message)]
-        fn ibc_packet_timeout(
-            &mut self,
-            msg: IbcPacketTimeoutMsg,
-        ) -> Result<IbcBasicResponse, trait_ibc::ibc::Error> {
-            // Ok(IbcBasicResponse {
-            //     messages: Vec::new(),
-            //     attributes: Vec::new(),
-            //     events: Vec::new(),
-            // })
-
-            // TODO: trap error like in receive? (same question as ack above)
-            let packet = msg.packet;
-            match self.on_packet_failure(packet, "timeout".to_string()) {
-                Ok(v) => Ok(v),
-                Err(e) => Err(trait_ibc::ibc::Error::TimeoutError),
-            }
-        }
-    }
+    // impl PSP37 for Contract {}
 
     impl Contract {
         #[ink(constructor)]
         pub fn new(token_address: AccountId, msg: InitMsg) -> Self {
-            let mut instance = Self::default();
+            let instance = Self::default();
 
             instance
         }
@@ -1001,231 +785,6 @@ pub mod my_psp22_wrapper {
         #[ink(message)]
         pub fn query_admin(&self) -> Result<Option<Addr>, Error> {
             Ok(Some(self.admin.clone()))
-        }
-
-        fn enforce_order_and_version(
-            &self,
-            channel: IbcChannel,
-            counterparty_version: Option<&str>,
-        ) -> Result<(), trait_ibc::ibc::Error> {
-            if channel.version != ICS20_VERSION {
-                return Err(trait_ibc::ibc::Error::InvalidIbcVersion {
-                    version: channel.version.clone(),
-                });
-            }
-            if let Some(version) = counterparty_version {
-                if version != ICS20_VERSION {
-                    return Err(trait_ibc::ibc::Error::InvalidIbcVersion {
-                        version: version.to_string(),
-                    });
-                }
-            }
-            if channel.order != ICS20_ORDERING {
-                return Err(trait_ibc::ibc::Error::OnlyOrderedChannel {});
-            }
-            Ok(())
-        }
-
-        fn do_ibc_packet_receive(
-            &mut self,
-            packet: &IbcPacket,
-        ) -> Result<IbcReceiveResponse, Error> {
-            let msg: trait_ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
-                Ok(v) => v,
-                Err(e) => return Err(Error::IBCError(e)),
-            };
-            let channel = packet.dest.channel_id.clone();
-
-            // If the token originated on the remote chain, it looks like "ucosm".
-            // If it originated on our chain, it looks like "port/channel/ucosm".
-            let denom = self.parse_voucher_denom(&msg.denom, &packet.src)?;
-
-            // make sure we have enough balance for this
-            self.reduce_channel_balance(&channel, denom, msg.amount)?;
-
-            // we need to save the data to update the balances in reply
-            let reply_args = ReplyArgs {
-                channel,
-                denom: denom.to_string(),
-                amount: msg.amount,
-            };
-            self.reply_args = reply_args;
-
-            let to_send = Amount::from_parts(denom.to_string(), msg.amount);
-            let gas_limit = 0;
-            let send = self.send_amount(to_send, msg.receiver.clone());
-            let mut submsg = SubMsg::reply_on_error(send, RECEIVE_ID);
-            submsg.gas_limit = Some(gas_limit);
-
-            let res = IbcReceiveResponse::new()
-                .set_ack(self.ack_success())
-                .add_submessage(submsg)
-                .add_attribute("action", "receive")
-                .add_attribute("sender", msg.sender)
-                .add_attribute("receiver", msg.receiver)
-                .add_attribute("denom", denom)
-                .add_attribute("amount", msg.amount.to_string())
-                .add_attribute("success", "true");
-
-            Ok(res)
-        }
-
-        pub fn increase_channel_balance(
-            &mut self,
-            channel: &str,
-            denom: &str,
-            amount: u128,
-        ) -> Result<(), Error> {
-            let mut state = self.channel_state.get((channel, denom)).unwrap_or_default();
-            state.outstanding += amount;
-            state.total_sent += amount;
-
-            self.channel_state.insert((channel, denom), &state);
-            Ok(())
-        }
-
-        pub fn reduce_channel_balance(
-            &mut self,
-            channel: &str,
-            denom: &str,
-            amount: u128,
-        ) -> Result<(), Error> {
-            let mut state = self.channel_state.get((channel, denom)).unwrap_or_default();
-            state.outstanding = state
-                .outstanding
-                .checked_sub(amount)
-                .expect("InsufficientFunds.");
-
-            self.channel_state.insert((channel, denom), &state);
-            Ok(())
-        }
-
-        // this is like increase, but it only "un-subtracts" (= adds) outstanding, not total_sent
-        // calling `reduce_channel_balance` and then `undo_reduce_channel_balance` should leave state unchanged.
-        pub fn undo_reduce_channel_balance(
-            &mut self,
-            channel: &str,
-            denom: &str,
-            amount: u128,
-        ) -> Result<(), Error> {
-            let mut state = self.channel_state.get((channel, denom)).unwrap_or_default();
-            state.outstanding += amount;
-
-            self.channel_state.insert((channel, denom), &state);
-            Ok(())
-        }
-
-        fn parse_voucher_denom<'a>(
-            &self,
-            voucher_denom: &'a str,
-            remote_endpoint: &IbcEndpoint,
-        ) -> Result<&'a str, Error> {
-            let split_denom: Vec<&str> = voucher_denom.splitn(3, '/').collect();
-            if split_denom.len() != 3 {
-                return Err(Error::NoForeignTokens {});
-            }
-            // a few more sanity checks
-            if split_denom[0] != remote_endpoint.port_id {
-                return Err(Error::FromOtherPort {
-                    port: split_denom[0].into(),
-                });
-            }
-            if split_denom[1] != remote_endpoint.channel_id {
-                return Err(Error::FromOtherChannel {
-                    channel: split_denom[1].into(),
-                });
-            }
-
-            Ok(split_denom[2])
-        }
-
-        // create a serialized success message
-        fn ack_success(&self) -> Vec<u8> {
-            let res = Ics20Ack::Result(vec![0x1]);
-            trait_ibc::ibc::to_binary(&res).unwrap()
-        }
-
-        // create a serialized error message
-        fn ack_fail(&self, err: String) -> Vec<u8> {
-            let res = Ics20Ack::Error(err);
-            trait_ibc::ibc::to_binary(&res).unwrap()
-        }
-
-        // update the balance stored on this (channel, denom) index
-        fn on_packet_success(&self, packet: IbcPacket) -> Result<IbcBasicResponse, Error> {
-            let msg: trait_ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
-                Ok(v) => v,
-                Err(e) => return Err(Error::IBCError(e)),
-            };
-
-            // similar event messages like ibctransfer module
-            let attributes = vec![
-                attr("action", "acknowledge"),
-                attr("sender", &msg.sender),
-                attr("receiver", &msg.receiver),
-                attr("denom", &msg.denom),
-                attr("amount", msg.amount.to_string()),
-                attr("success", "true"),
-            ];
-
-            Ok(IbcBasicResponse::new().add_attributes(attributes))
-        }
-
-        // return the tokens to sender
-        fn on_packet_failure(
-            &mut self,
-            packet: IbcPacket,
-            err: String,
-        ) -> Result<IbcBasicResponse, Error> {
-            let msg: trait_ibc::ibc::Ics20Packet = match from_binary(&packet.data) {
-                Ok(v) => v,
-                Err(e) => return Err(Error::IBCError(e)),
-            };
-
-            // undo the balance update on failure (as we pre-emptively added it on send)
-            self.reduce_channel_balance(&packet.src.channel_id, &msg.denom, msg.amount)?;
-
-            let to_send = Amount::from_parts(msg.denom.clone(), msg.amount);
-            let gas_limit = 0;
-            let send = self.send_amount(to_send, msg.sender.clone());
-            let mut submsg = SubMsg::reply_on_error(send, ACK_FAILURE_ID);
-            submsg.gas_limit = Some(gas_limit);
-
-            // similar event messages like ibctransfer module
-            let res = IbcBasicResponse::new()
-                .add_submessage(submsg)
-                .add_attribute("action", "acknowledge")
-                .add_attribute("sender", msg.sender)
-                .add_attribute("receiver", msg.receiver)
-                .add_attribute("denom", msg.denom)
-                .add_attribute("amount", msg.amount.to_string())
-                .add_attribute("success", "false")
-                .add_attribute("error", err);
-
-            Ok(res)
-        }
-
-        fn send_amount(&self, amount: Amount, recipient: String) -> CosmosMsg<Empty> {
-            match amount {
-                Amount::Native(coin) => BankMsg::Send {
-                    to_address: recipient,
-                    amount: vec![coin],
-                }
-                .into(),
-                Amount::Cw20(coin) => {
-                    // todo warp for psp22
-                    let msg = Cw20ExecuteMsg::Transfer {
-                        recipient,
-                        amount: coin.amount,
-                    };
-                    WasmMsg::Execute {
-                        contract_addr: coin.address,
-                        msg: trait_ibc::ibc::to_binary(&msg).unwrap(),
-                        funds: vec![],
-                    }
-                    .into()
-                }
-            }
         }
     }
 }

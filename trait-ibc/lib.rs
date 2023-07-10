@@ -1125,28 +1125,6 @@ pub mod ibc {
         }
     }
 
-    pub fn from_slice<T: DeserializeOwned>(value: &[u8]) -> Result<T, Error> {
-        serde_json::from_slice(value).map_err(|_e| Error::ParseError)
-    }
-
-    pub fn from_binary<T: DeserializeOwned>(value: &Vec<u8>) -> Result<T, Error> {
-        from_slice(value.as_slice())
-    }
-
-    pub fn to_vec<T>(data: &T) -> Result<Vec<u8>, Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        serde_json::to_vec(data).map_err(|_e| Error::SerializeError)
-    }
-
-    pub fn to_binary<T>(data: &T) -> Result<Vec<u8>, Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        to_vec(data)
-    }
-
     #[inline]
     pub fn attr(key: impl Into<String>, value: impl Into<String>) -> Attribute {
         Attribute {
