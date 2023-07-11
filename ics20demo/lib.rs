@@ -4,11 +4,11 @@
 
 use crate::my_psp37_wrapper::Error;
 use ink::env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment};
+use ink::prelude::string::{String, ToString};
 use ink::prelude::vec::Vec;
 
 /// General result type.
 pub type Result<T> = core::result::Result<T, IBCICS20Error>;
-
 type DefaultAccountId = <ink::env::DefaultEnvironment as Environment>::AccountId;
 type DefaultBalance = <ink::env::DefaultEnvironment as Environment>::Balance;
 
@@ -59,6 +59,10 @@ pub trait IBCICS20Extension {
         value: DefaultBalance,
         data: Vec<u8>,
     ) -> Result<()>;
+
+    // PSP37 Metadata
+    #[ink(extension = 0x30007)]
+    fn get_attribute(id: u32, key: Vec<u8>) -> Option<Vec<u8>>;
 }
 
 #[derive(scale::Encode, scale::Decode)]
@@ -82,6 +86,15 @@ impl FromStatusCode for IBCICS20Error {
 impl From<scale::Error> for IBCICS20Error {
     fn from(_: scale::Error) -> Self {
         panic!("encountered unexpected invalid SCALE encoding")
+    }
+}
+
+impl From<IBCICS20Error> for String {
+    fn from(e: IBCICS20Error) -> Self {
+        match e {
+            FailIBCCall => "FailIBCCall".into(),
+            FailScaleCode => "FailScaleCode".into(),
+        }
     }
 }
 
@@ -785,6 +798,107 @@ pub mod my_psp37_wrapper {
         #[ink(message)]
         pub fn query_admin(&self) -> Result<Option<Addr>, Error> {
             Ok(Some(self.admin.clone()))
+        }
+
+        // PSP37 interface queries
+
+        /// Returns the account balance for the specified asset & owner.
+        #[ink(message)]
+        pub fn balance_of(&self, owner: AccountId, id: Option<u32>) -> Result<Balance, PSP37Error> {
+            let balance = self
+                .env()
+                .extension()
+                .balance_of(owner, id)
+                .map_err(|e| PSP37Error::Custom(e.into()))?;
+            Ok(balance)
+        }
+
+        /// Returns the total token supply of the specified asset.
+        #[ink(message)]
+        pub fn total_supply(&self, id: Option<u32>) -> Result<Balance, PSP37Error> {
+            let total_supply = self
+                .env()
+                .extension()
+                .total_supply(id)
+                .map_err(|e| PSP37Error::Custom(e.into()))?;
+            Ok(total_supply)
+        }
+
+        /// Returns the amount which `spender` is still allowed to withdraw from `owner`
+        /// for the specified asset.
+        #[ink(message)]
+        pub fn allowance(
+            &self,
+            owner: AccountId,
+            spender: AccountId,
+            id: Option<u32>,
+        ) -> Result<Balance, PSP37Error> {
+            let allowance = self
+                .env()
+                .extension()
+                .allowance(owner, spender, id)
+                .map_err(|e| PSP37Error::Custom(e.into()))?;
+            Ok(allowance)
+        }
+
+        // PSP37 approve
+
+        /// Allows `spender` to withdraw from the caller's account multiple times, up to
+        /// the `value` amount of the specified asset.
+        #[ink(message)]
+        pub fn approve(
+            &mut self,
+            spender: AccountId,
+            id: Option<u32>,
+            value: Balance,
+        ) -> Result<(), PSP37Error> {
+            let _ = self
+                .env()
+                .extension()
+                .approve(spender, id, value)
+                .map_err(|e| PSP37Error::Custom(e.into()))?;
+            Ok(())
+        }
+
+        // PSP37 transfer
+
+        /// Transfers `value` amount of specified asset from the caller's account to the
+        /// account `to`.
+        #[ink(message)]
+        pub fn transfer(
+            &mut self,
+            to: AccountId,
+            id: u32,
+            value: Balance,
+            data: Vec<u8>,
+        ) -> Result<(), PSP37Error> {
+            let _ = self
+                .env()
+                .extension()
+                .transfer(to, id, value, data)
+                .map_err(|e| PSP37Error::Custom(e.into()))?;
+            Ok(())
+        }
+
+        // PSP37 transfer_from
+
+        /// Transfers `value` amount of specified asset on the behalf of `from` to the
+        /// account `to`.
+        #[ink(message)]
+        pub fn transfer_from(
+            &mut self,
+            from: AccountId,
+            to: AccountId,
+            id: u32,
+            value: Balance,
+            data: Vec<u8>,
+        ) -> Result<(), PSP37Error> {
+            let _ = self
+                .env()
+                .extension()
+                .transfer_from(from, to, id, value, data)
+                .map_err(|e| PSP37Error::Custom(e.into()))?;
+            Ok(())
         }
     }
 }
