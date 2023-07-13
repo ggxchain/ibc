@@ -48,7 +48,7 @@ pub trait IBCICS20Extension {
 
     // PSP37 transfer
     #[ink(extension = 0x30005)]
-    fn transfer(to: DefaultAccountId, id: u32, value: DefaultBalance, data: Vec<u8>) -> Result<()>;
+    fn transfer(to: DefaultAccountId, id: u32, value: DefaultBalance) -> Result<()>;
 
     // PSP37 transfer_from
     #[ink(extension = 0x30006)]
@@ -57,12 +57,7 @@ pub trait IBCICS20Extension {
         to: DefaultAccountId,
         id: u32,
         value: DefaultBalance,
-        data: Vec<u8>,
     ) -> Result<()>;
-
-    // PSP37 Metadata
-    #[ink(extension = 0x30007)]
-    fn get_attribute(id: u32, key: Vec<u8>) -> Option<Vec<u8>>;
 }
 
 #[derive(scale::Encode, scale::Decode)]
@@ -92,8 +87,8 @@ impl From<scale::Error> for IBCICS20Error {
 impl From<IBCICS20Error> for String {
     fn from(e: IBCICS20Error) -> Self {
         match e {
-            FailIBCCall => "FailIBCCall".into(),
-            FailScaleCode => "FailScaleCode".into(),
+            IBCICS20Error::FailIBCCall => "FailIBCCall".into(),
+            IBCICS20Error::FailScaleCode => "FailScaleCode".into(),
         }
     }
 }
@@ -619,40 +614,7 @@ pub mod my_psp37_wrapper {
             instance
         }
 
-        /// execute spec set function  for ExecuteMsg
-        #[ink(message)]
-        pub fn execute(&mut self, info: MessageInfo, msg: ExecuteMsg) -> Result<Response, Error> {
-            Ok(Response {
-                messages: Vec::new(),
-                attributes: Vec::new(),
-                events: Vec::new(),
-                data: None,
-            })
-        }
-
-        /// query info for spec QueryMsg
-        #[ink(message)]
-        pub fn query(&self, msg: QueryMsg) -> Result<Vec<u8>, Error> {
-            Ok(Vec::new())
-        }
-
         // set function list
-
-        /// receive token, This accepts a properly-encoded ReceiveMsg from a cw20 contract
-        #[ink(message)]
-        pub fn execute_receive(
-            &mut self,
-            info: MessageInfo,
-            wrapper: Cw20ReceiveMsg,
-        ) -> Result<Response, Error> {
-            Ok(Response {
-                messages: Vec::new(),
-                attributes: Vec::new(),
-                events: Vec::new(),
-                data: None,
-            })
-        }
-
         /// transfer token, This allows us to transfer *exactly one* native token
         #[ink(message)]
         pub fn execute_transfer(
@@ -690,114 +652,6 @@ pub mod my_psp37_wrapper {
                 events: Vec::new(),
                 data: None,
             })
-        }
-
-        /// This must be called by gov_contract, will allow a new cw20 token to be sent
-        //// The gov contract can allow new contracts, or increase the gas limit on existing contracts.
-        /// It cannot block or reduce the limit to avoid forcible sticking tokens in the channel.
-        #[ink(message)]
-        pub fn execute_allow(
-            &mut self,
-            info: MessageInfo,
-            allow: AllowMsg,
-        ) -> Result<Response, Error> {
-            Ok(Response {
-                messages: Vec::new(),
-                attributes: Vec::new(),
-                events: Vec::new(),
-                data: None,
-            })
-        }
-
-        /// update admin address, Change the admin (must be called by current admin)
-        #[ink(message)]
-        pub fn execute_update_admin(&mut self, addr: Addr) -> Result<Response, Error> {
-            Ok(Response {
-                messages: Vec::new(),
-                attributes: Vec::new(),
-                events: Vec::new(),
-                data: None,
-            })
-        }
-
-        // query function list
-
-        /// Return the port ID bound by this contract.
-        #[ink(message)]
-        pub fn query_port(&self) -> Result<PortResponse, Error> {
-            Ok(PortResponse {
-                port_id: 0.to_string(),
-            })
-        }
-
-        /// Show all channels we have connected to.
-        #[ink(message)]
-        pub fn query_list(&self) -> Result<ListChannelsResponse, Error> {
-            Ok(ListChannelsResponse {
-                channels: Vec::new(),
-            })
-        }
-
-        ///  Returns the details of the name channel, error if not created.
-        #[ink(message)]
-        pub fn query_channel(&self, id: String) -> Result<ChannelResponse, Error> {
-            let info = self
-                .channel_info
-                .get(&id)
-                .ok_or(Error::ChannelInfoNotFound)?;
-
-            let channel_token_denom = self
-                .channel_token_denom
-                .get(&id)
-                .ok_or(Error::ChannelTokenDenomNotFound)?;
-
-            Ok(ChannelResponse {
-                info: ChannelInfo {
-                    id: "0".to_string(),
-                    counterparty_endpoint: IbcEndpoint {
-                        port_id: "0".to_string(),
-                        channel_id: "0".to_string(),
-                    },
-                    connection_id: "0".to_string(),
-                },
-                balances: Vec::new(),
-                total_sent: Vec::new(),
-            })
-        }
-
-        /// Show the Config.
-        #[ink(message)]
-        pub fn query_config(&self) -> Result<ConfigResponse, Error> {
-            Ok(ConfigResponse {
-                default_timeout: 0,
-                default_gas_limit: None,
-                gov_contract: "".to_string(),
-            })
-        }
-
-        /// Query if a given cw20 contract is allowed.
-        #[ink(message)]
-        pub fn query_allowed(&self) -> Result<AllowedResponse, Error> {
-            Ok(AllowedResponse {
-                is_allowed: false,
-                gas_limit: None,
-            })
-        }
-
-        /// List all allowed cw20 contracts.
-        #[ink(message)]
-        pub fn list_allowed(
-            &self,
-            start_after: Option<String>,
-            limit: Option<u32>,
-        ) -> Result<ListAllowedResponse, Error> {
-            Ok(ListAllowedResponse { allow: Vec::new() })
-        }
-
-        /// Show current admin
-        #[ink(message)]
-        pub fn query_admin(&self) -> Result<Option<Addr>, Error> {
-            Ok(Some(self.admin.clone()))
         }
 
         // PSP37 interface queries
@@ -875,7 +729,7 @@ pub mod my_psp37_wrapper {
             let _ = self
                 .env()
                 .extension()
-                .transfer(to, id, value, data)
+                .transfer(to, id, value)
                 .map_err(|e| PSP37Error::Custom(e.into()))?;
             Ok(())
         }
@@ -896,7 +750,7 @@ pub mod my_psp37_wrapper {
             let _ = self
                 .env()
                 .extension()
-                .transfer_from(from, to, id, value, data)
+                .transfer_from(from, to, id, value)
                 .map_err(|e| PSP37Error::Custom(e.into()))?;
             Ok(())
         }
