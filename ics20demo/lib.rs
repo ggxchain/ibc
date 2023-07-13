@@ -2,9 +2,8 @@
 #![feature(min_specialization)]
 #![feature(default_alloc_error_handler)]
 
-use crate::my_psp37_wrapper::Error;
 use ink::env::{chain_extension::FromStatusCode, DefaultEnvironment, Environment};
-use ink::prelude::string::{String, ToString};
+use ink::prelude::string::String;
 use ink::prelude::vec::Vec;
 
 /// General result type.
@@ -111,8 +110,6 @@ impl Environment for IBCDefaultEnvironment {
 
 #[openbrush::contract(env = crate::IBCDefaultEnvironment)]
 pub mod my_psp37_wrapper {
-    use core::str::FromStr;
-    use core::time::Duration;
     use trait_ibc::ibc::*;
 
     use ibc::core::ics24_host::identifier::ChannelId;
@@ -121,7 +118,6 @@ pub mod my_psp37_wrapper {
     use ink::prelude::borrow::ToOwned;
     use ink::prelude::{
         string::{String, ToString},
-        vec,
         vec::Vec,
     };
     use ink::storage::Mapping;
@@ -136,9 +132,6 @@ pub mod my_psp37_wrapper {
 
     pub const ICS20_VERSION: &str = "ics20-1";
     pub const ICS20_ORDERING: IbcOrder = IbcOrder::Unordered;
-
-    const RECEIVE_ID: u64 = 1337;
-    const ACK_FAILURE_ID: u64 = 0xfa17;
 
     #[cfg(feature = "std")]
     use ink::storage::traits::StorageLayout;
@@ -608,7 +601,7 @@ pub mod my_psp37_wrapper {
 
     impl Contract {
         #[ink(constructor)]
-        pub fn new(token_address: AccountId, msg: InitMsg) -> Self {
+        pub fn new() -> Self {
             let instance = Self::default();
 
             instance
@@ -633,7 +626,7 @@ pub mod my_psp37_wrapper {
                     let amount = coin.amount;
                     let sender = sender;
                     let receiver = msg.remote_address;
-                    let rt = self.env().extension().raw_tranfer(
+                    let _rt = self.env().extension().raw_tranfer(
                         source_channel.into(),
                         denom.into(),
                         amount.to_string().into(),
@@ -659,6 +652,10 @@ pub mod my_psp37_wrapper {
         /// Returns the account balance for the specified asset & owner.
         #[ink(message)]
         pub fn balance_of(&self, owner: AccountId, id: Option<u32>) -> Result<Balance, PSP37Error> {
+            if id.is_none() {
+                return Ok(Balance::default());
+            }
+
             let balance = self
                 .env()
                 .extension()
@@ -670,6 +667,10 @@ pub mod my_psp37_wrapper {
         /// Returns the total token supply of the specified asset.
         #[ink(message)]
         pub fn total_supply(&self, id: Option<u32>) -> Result<Balance, PSP37Error> {
+            if id.is_none() {
+                return Ok(Balance::default());
+            }
+
             let total_supply = self
                 .env()
                 .extension()
@@ -687,6 +688,10 @@ pub mod my_psp37_wrapper {
             spender: AccountId,
             id: Option<u32>,
         ) -> Result<Balance, PSP37Error> {
+            if id.is_none() {
+                return Ok(Balance::default());
+            }
+
             let allowance = self
                 .env()
                 .extension()
@@ -706,6 +711,10 @@ pub mod my_psp37_wrapper {
             id: Option<u32>,
             value: Balance,
         ) -> Result<(), PSP37Error> {
+            if id.is_none() {
+                return Ok(());
+            }
+
             let _ = self
                 .env()
                 .extension()
@@ -724,7 +733,7 @@ pub mod my_psp37_wrapper {
             to: AccountId,
             id: u32,
             value: Balance,
-            data: Vec<u8>,
+            _data: Vec<u8>,
         ) -> Result<(), PSP37Error> {
             let _ = self
                 .env()
@@ -745,7 +754,7 @@ pub mod my_psp37_wrapper {
             to: AccountId,
             id: u32,
             value: Balance,
-            data: Vec<u8>,
+            _data: Vec<u8>,
         ) -> Result<(), PSP37Error> {
             let _ = self
                 .env()
