@@ -531,7 +531,7 @@ open url to deploy ink contract(my_psp37_wrapper.contract)
 https://testnet.sydney.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
 ```
 
-# call executeTransfer to tranfer to cosmos
+# call ink! executeTransfer to tranfer to cosmos
 
 ![params](./img/executeTransfer.jpg)
 
