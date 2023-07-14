@@ -533,7 +533,7 @@ https://testnet.sydney.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
 
 # call executeTransfer to tranfer to cosmos
 
-![params](./executeTransfer.jpg)
+![params](./img/executeTransfer.jpg)
 
 ```bash
 channel: channel-0
