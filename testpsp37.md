@@ -60,18 +60,25 @@ call psp37_wrapper->allowance(BOB, ALICE, 666)
 ![params](./img/psp37-7.jpg)
 ```
 open page https://polkadot.js.org/apps/#/contracts
-call psp37_wrapper->transfer(ALICE, 666, 1000000000000000000, None)
-```
-
-# test transfer_from
-![params](./img/psp37-8.jpg)
-```
-open page https://polkadot.js.org/apps/#/contracts
-call psp37_wrapper->transferFrom(BOB, ALICE, 666, 1000000000000000000, None)
+call psp37_wrapper->transfer(ALICE, 666, 1, None)
 ```
 
 # check alice balance
-![params](./img/psp37-49.jpg)
+![params](./img/psp37-8.jpg)
+```
+open page https://polkadot.js.org/apps/#/contracts
+call psp37_wrapper->balanceOf(ALICE, 666)
+```
+
+# test transfer_from
+![params](./img/psp37-9.jpg)
+```
+open page https://polkadot.js.org/apps/#/contracts
+ALICE call psp37_wrapper->transferFrom(BOB, ALICE, 666, 1, None)
+```
+
+# check alice balance
+![params](./img/psp37-10.jpg)
 ```
 open page https://polkadot.js.org/apps/#/contracts
 call psp37_wrapper->balanceOf(ALICE, 666)
