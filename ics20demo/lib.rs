@@ -624,13 +624,13 @@ pub mod my_psp37_wrapper {
                     let source_channel = msg.channel;
                     let denom = coin.denom;
                     let amount = coin.amount;
-                    let sender = sender;
+                    let sender = sender.into_string();
                     let receiver = msg.remote_address;
                     let _rt = self.env().extension().raw_tranfer(
                         source_channel.into(),
                         denom.into(),
                         amount.to_string().into(),
-                        sender.into_string().into(),
+                        sender.into(),
                         receiver.into(),
                         timestamp,
                         Default::default(),

@@ -32,7 +32,7 @@ cd golden-gate
 git checkout ibc-ink-extension-runtime
 
 # build golden-gate 
-cargo build --release
+cargo build --release --no-default-features --features="aura,with-rocksdb-weights,testnet"
 # optional put polkadot cli into your BIN PATH
 export PATH="$PWD/./target/release/:$PATH"
 
@@ -332,7 +332,7 @@ open page https://polkadot.js.org/apps/#/sudo
 call assets->forceCreate(666, Id/BOB, Yes, 10)
 ```
 
-# transfer from earth to rococo
+# transfer from earth to ggx rococo
 ```bash
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --number-msgs 1 --dst-chain rococo-0 --src-chain earth-0 --src-port transfer --src-channel channel-0 --amount 999000 --denom ERT
 ```
@@ -426,7 +426,7 @@ balances:
   denom_trace_hash: ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF
 ```
 
-# transfer back to earth from rococo
+# transfer back to earth from ggx rococo
 ```bash
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --denom ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF  --dst-chain earth-0 --src-chain rococo-0 --src-port transfer --src-channel channel-0 --amount 999000
 ```
@@ -515,6 +515,49 @@ balances:
   denom: GGX Test
 ```
 
+# transfer from earth to ggx rococo
+```bash
+hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --number-msgs 1 --dst-chain rococo-0 --src-chain earth-0 --src-port transfer --src-channel channel-0 --amount 999000 --denom ERT
+```
+
+# deploy ink! contract 
+
+```bash
+git clone https://github.com/baidang201/ibc.git
+cd ics20demo
+cargo contract build
+
+open url to deploy ink contract(my_psp37_wrapper.contract) 
+https://testnet.sydney.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
+```
+
+# call executeTransfer to tranfer to cosmos
+
+![params](./executeTransfer.jpg)
+
+```bash
+channel: channel-0
+remoteAddress: cosmos1xh2jvz9ecty8qdctlgscmys2dr5gz729k0l7x4
+denom: ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF
+amount: 2
+sender: 0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438
+```
+
+# query substrate account(Bob) change
+```bash
+./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+```
+
+```bash
+account: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+balances:
+- amount: 98742999999976666669
+  denom: GGX Test
+- amount: 998998
+  denom: ERT
+  trace_path: transfer/channel-0
+  denom_trace_hash: ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF
+```
 
 
 # Optional : browser info via polkadotjs

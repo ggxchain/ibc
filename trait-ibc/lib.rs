@@ -5,7 +5,7 @@
 pub mod ibc {
     use ink::prelude::{string::String, vec, vec::Vec};
     use scale::{Decode, Encode};
-    use serde::{de::DeserializeOwned, Deserialize, Serialize};
+    use serde::{Deserialize, Serialize};
 
     #[cfg(feature = "std")]
     use ink::storage::traits::StorageLayout;
