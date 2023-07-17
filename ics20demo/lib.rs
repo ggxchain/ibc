@@ -647,57 +647,71 @@ pub mod my_psp37_wrapper {
             })
         }
 
+        // query function list
+
+        /// Return the port ID bound by this contract.
+        #[ink(message)]
+        pub fn query_port(&self) -> Result<PortResponse, Error> {
+            Ok(PortResponse {
+                port_id: PortId::transfer().to_string(),
+            })
+        }
+
         // PSP37 interface queries
 
         /// Returns the account balance for the specified asset & owner.
         #[ink(message)]
-        pub fn balance_of(&self, owner: AccountId, id: Option<u32>) -> Result<Balance, PSP37Error> {
+        pub fn balance_of(&self, owner: AccountId, id: Option<u32>) -> Balance {
             if id.is_none() {
-                return Ok(Balance::default());
+                return Balance::default();
             }
 
-            let balance = self
+            let rt = self
                 .env()
                 .extension()
                 .balance_of(owner, id)
-                .map_err(|e| PSP37Error::Custom(e.into()))?;
-            Ok(balance)
+                .map_err(|e| PSP37Error::Custom(e.into()));
+            match rt {
+                Ok(balance) => balance,
+                _ => Balance::default(),
+            }
         }
 
         /// Returns the total token supply of the specified asset.
         #[ink(message)]
-        pub fn total_supply(&self, id: Option<u32>) -> Result<Balance, PSP37Error> {
+        pub fn total_supply(&self, id: Option<u32>) -> Balance {
             if id.is_none() {
-                return Ok(Balance::default());
+                return Balance::default();
             }
 
-            let total_supply = self
+            let rt = self
                 .env()
                 .extension()
                 .total_supply(id)
-                .map_err(|e| PSP37Error::Custom(e.into()))?;
-            Ok(total_supply)
+                .map_err(|e| PSP37Error::Custom(e.into()));
+            match rt {
+                Ok(total_supply) => total_supply,
+                _ => Balance::default(),
+            }
         }
 
         /// Returns the amount which `spender` is still allowed to withdraw from `owner`
         /// for the specified asset.
         #[ink(message)]
-        pub fn allowance(
-            &self,
-            owner: AccountId,
-            spender: AccountId,
-            id: Option<u32>,
-        ) -> Result<Balance, PSP37Error> {
+        pub fn allowance(&self, owner: AccountId, spender: AccountId, id: Option<u32>) -> Balance {
             if id.is_none() {
-                return Ok(Balance::default());
+                return Balance::default();
             }
 
-            let allowance = self
+            let rt = self
                 .env()
                 .extension()
                 .allowance(owner, spender, id)
-                .map_err(|e| PSP37Error::Custom(e.into()))?;
-            Ok(allowance)
+                .map_err(|e| PSP37Error::Custom(e.into()));
+            match rt {
+                Ok(allowance) => allowance,
+                _ => Balance::default(),
+            }
         }
 
         // PSP37 approve
