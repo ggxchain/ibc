@@ -2,7 +2,7 @@
 # 1 ibc infomation
 ## 1.1 Channel lifecycle management
 
-![](https://github.com/cosmos/ibc/raw/main/spec/core/ics-004-channel-and-packet-semantics/channel-state-machine.png)
+![](./img/CSM.png)
 
 
 # 2 ics20 interface
