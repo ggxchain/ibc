@@ -21,7 +21,7 @@
         pub fn query_port(&self) -> PortResponse ;
 ```
 
-## 2.2 p2p22 interface  (open brach ink! Fungible Token Standard for Substrate's contracts pallet)
+## 2.2 PSP37 interface  (open brach ink! Fungible Token Standard for Substrate's contracts pallet)
 ```js
 /// Contract module which provides a basic implementation of multiple token types.
 /// A single deployed contract may include any combination of fungible tokens,
