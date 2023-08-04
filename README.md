@@ -21,7 +21,7 @@
         pub fn query_port(&self) -> PortResponse ;
 ```
 
-## 2.2 PSP37 interface  (open brach ink! Fungible Token Standard for Substrate's contracts pallet)
+## 2.2 PSP37 interface  (open brach ink! ERC-1155: Multi Token Standard for Substrate's contracts pallet)
 ```js
 /// Contract module which provides a basic implementation of multiple token types.
 /// A single deployed contract may include any combination of fungible tokens,
@@ -626,7 +626,7 @@ pub enum Error {
 }
 ```
 
-# 4 ins721 interface
+# 4 ics721 interface
 ## 4.1 interface
 ```js
         // receive nft
@@ -995,6 +995,5 @@ pub enum Error {
 [spec/core/ics-004-channel-and-packet-semantics](https://github.com/cosmos/ibc/tree/main/spec/core/ics-004-channel-and-packet-semantics)
 
 [PSP37 protocol](https://github.com/w3f/PSPs/blob/master/PSPs/psp-37.md)
-
 
 [PSP37 trait](https://github.com/Brushfam/openbrush-contracts/blob/main/contracts/src/traits/psp37/psp37.rs)
