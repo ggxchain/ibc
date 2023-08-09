@@ -457,7 +457,7 @@ hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 
 
 The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query-substrate-accountbob-change).
 
-outout:
+**output:**
 
 ```bash
 2023-06-13T12:57:50.550949Z  INFO ThreadId(01) running Hermes v1.3.0+cb38eadb
