@@ -457,7 +457,7 @@ hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 
 
 tips:
 
-The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query substrate account(Bob) change).
+The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query-substrate-accountbob-change).
 
 outout:
 
