@@ -21,15 +21,12 @@ go 1.19+
 
 python 3.10+
 
-[ignite latest](https://ignite.com/)
-
 ## spin up substrate/polkadot
 
 ```bash
 # Clone golden-gate
-git clone https://github.com/GoldenGateGGX/golden-gate.git
+git clone https://github.com/ggxchain/ggxnode
 cd golden-gate
-git checkout ibc-ink-extension-runtime
 
 # build golden-gate 
 cargo build --release --no-default-features --features="aura,with-rocksdb-weights,testnet"
@@ -37,7 +34,14 @@ cargo build --release --no-default-features --features="aura,with-rocksdb-weight
 export PATH="$PWD/./target/release/:$PATH"
 
 ./target/release/golden-gate-node  --dev --ws-external --rpc-external --unsafe-ws-external --unsafe-rpc-external --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
+```
 
+## spin up ignite
+
+```bash
+git clone https://github.com/ignite/cli --branch v0.25.2
+cd cli
+make install
 ```
 
 ## spin up cosmos chain
@@ -50,7 +54,6 @@ git checkout icf-m3
 
 # launch a cosmos chain: earth 
 ignite chain serve -f -v -c earth.yml
-
 ```
 
 ## compile and config hermes
@@ -61,19 +64,21 @@ $ cd hermes
 $ git checkout icf-m3
 
 # build
-$ cargo build -p ibc-relayer-cli
+$ cargo build --release -p ibc-relayer-cli
 # check hermes version
-$ ./target/debug/hermes version
+$ ./target/release/hermes version
 
 # optional,export PATH
 # export PATH="$PWD/./target/release/:$PATH"
-export PATH="$PWD/./target/debug/:$PATH"
+export PATH="$PWD/target/release/:$PATH"
 
 # add key
 hermes --config config/cos_sub.toml keys add --chain earth-0 --key-file config/alice_cosmos_key.json --key-name alice
 hermes --config config/cos_sub.toml keys add --chain rococo-0 --key-file config/bob_substrate_key.json --key-name Bob
-
 ```
+
+for example:
+
 ```bash
 li@liyihangs-MBP hermes % hermes --config config/cos_sub.toml keys add --chain earth-0 --key-file config/alice_cosmos_key.json --key-name alice
 2023-06-13T11:59:12.139917Z  INFO ThreadId(01) running Hermes v1.3.0+cb38eadb
@@ -87,15 +92,16 @@ SUCCESS Added key 'Bob' (0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226a
 
 ## Test
 
+### create channel
 
-
-# create channel
 ```bash
-
 cd hermes
 ## may cost few minutes
 hermes --config config/cos_sub.toml create channel --a-chain earth-0 --b-chain rococo-0 --a-port transfer --b-port transfer --new-client-connection --yes
 ```
+
+for example:
+
 ```bash
  li@liyihangs-MBP hermes % hermes --config config/cos_sub.toml create channel --a-chain earth-0 --b-chain rococo-0 --a-port transfer --b-port transfer --new-client-connection --yes
 2023-06-26T07:14:33.778994Z  INFO ThreadId(01) running Hermes v1.3.0+cdcb3804c
@@ -318,24 +324,26 @@ SUCCESS Channel {
 }
 ```
 
-# start hermes service 
+### start hermes service
+
 ```bash
 hermes --config config/cos_sub.toml start
 ```
 
-# create cross asset on substrate 
-```bash
-#'{"id":666,"owner":{"Id": "o5m6uZ4AhPCr3rw3obfsgkt5xY6c4bFcZcrQbvc8xhYhkmz5J"},"is_sufficient":true,"min_balance": 10}
+### create cross asset on substrate
 
-open page https://polkadot.js.org/apps/#/sudo
+Open in your WEB browser `https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/sudo`.
 
-call assets->forceCreate(666, Id/BOB, Yes, 10)
-```
+Call `assets->forceCreate(666, Id, BOB, Yes, 10)`.
 
-# transfer from earth to ggx rococo
+### transfer from earth to ggx rococo
+
 ```bash
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --number-msgs 1 --dst-chain rococo-0 --src-chain earth-0 --src-port transfer --src-channel channel-0 --amount 999000 --denom ERT
 ```
+
+for example:
+
 ```bash
 2023-06-13T12:49:26.206298Z  INFO ThreadId(01) running Hermes v1.3.0+cb38eadb
 2023-06-13T12:49:26.282833Z DEBUG ThreadId(01) connection hop underlying the channel: ConnectionEnd { state: Open, client_id: ClientId("10-grandpa-0"), counterparty: Counterparty { client_id: ClientId("07-tendermint-0"), connection_id: Some(ConnectionId("connection-0")), prefix: ibc }, versions: [Version { identifier: "1", features: ["ORDER_ORDERED", "ORDER_UNORDERED"] }], delay_period: 0ns }
@@ -391,12 +399,17 @@ SUCCESS [
     },
 ]
 ```
-# wait for auto relay by hermes,about 30s
+### wait for auto relay by hermes,about 30s
 
-# query cosmos account(Alice) change 
+### query cosmos account(Alice) change
+
 ```bash
+cd oct-planet
 earth --node tcp://localhost:26657 query bank balances $(earth --home .earth keys --keyring-backend="test" show alice -a)
 ```
+
+output:
+
 ```bash
 balances:
 - amount: "199001000"
@@ -408,13 +421,19 @@ pagination:
   total: "0"
 ```
 
-# query substrate account(Bob) change
+### query substrate account(Bob) change
+
 ```bash
 # first install substrate-interface
 pip install substrate-interface
+```
 
+```bash
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
+
+output:
+
 ```bash
 account: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 balances:
@@ -426,10 +445,14 @@ balances:
   denom_trace_hash: ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF
 ```
 
-# transfer back to earth from ggx rococo
+### transfer back to earth from ggx rococo
+
 ```bash
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --denom ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF  --dst-chain earth-0 --src-chain rococo-0 --src-port transfer --src-channel channel-0 --amount 999000
 ```
+
+outout:
+
 ```bash
 2023-06-13T12:57:50.550949Z  INFO ThreadId(01) running Hermes v1.3.0+cb38eadb
 2023-06-13T12:57:50.626128Z DEBUG ThreadId(11) 🐙🐙 ics10::substrate::query_channel -> channel_end: ChannelEnd { state: Open, ordering: Unordered, remote: Counterparty { port_id: PortId("transfer"), channel_id: Some(ChannelId("channel-0")) }, connection_hops: [ConnectionId("connection-0")], version: Version("ics20-1") }
@@ -487,10 +510,13 @@ SUCCESS [
 ]
 ```
 
-# query cosmos account(Alice) change 
+### query cosmos account(Alice) change
+
 ```bash
 earth --node tcp://localhost:26657 query bank balances $(earth --home .earth keys --keyring-backend="test" show alice -a)
 ```
+
+output:
 
 ```bash
 balances:
@@ -503,10 +529,13 @@ pagination:
   total: "0"
 ```
 
-# query substrate account(Bob) change
+### query substrate account(Bob) change
+
 ```bash
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
+
+output:
 
 ```bash
 account: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
@@ -515,23 +544,30 @@ balances:
   denom: GGX Test
 ```
 
-# transfer from earth to ggx rococo
+### transfer from earth to ggx rococo
+
 ```bash
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --number-msgs 1 --dst-chain rococo-0 --src-chain earth-0 --src-port transfer --src-channel channel-0 --amount 999000 --denom ERT
 ```
 
-# deploy ink! contract 
+### install cargo-contract
+
+```bash
+cargo install --force --locked cargo-contract --version 3.0.1
+```
+
+### deploy ink! contract
 
 ```bash
 git clone https://github.com/baidang201/ibc.git
 cd ics20demo
 cargo contract build
-
-open url to deploy ink contract(my_psp37_wrapper.contract) 
-https://testnet.sydney.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
 ```
 
-# call ink! executeTransfer to tranfer to cosmos
+Open URL in your WEB browser to deploy ink! contract `my_psp37_wrapper.contract`
+https://testnet.sydney.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
+
+### call ink! executeTransfer to tranfer to cosmos
 
 ![params](./img/executeTransfer.jpg)
 
@@ -542,12 +578,18 @@ denom: ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF
 amount: 2
 sender: 0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438
 ```
-tips: 0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438 is the hex of the caller address pub key 0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48
 
-# query substrate account(Bob) change
+tips:
+
+`0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438` is the hex of the caller address pub key `0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48`.
+
+### query substrate account(Bob) change
+
 ```bash
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
+
+output:
 
 ```bash
 account: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
@@ -560,7 +602,6 @@ balances:
   denom_trace_hash: ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF
 ```
 
-
-# Optional : browser info via polkadotjs
+### Optional: browser info via polkadotjs
 
 N/A
