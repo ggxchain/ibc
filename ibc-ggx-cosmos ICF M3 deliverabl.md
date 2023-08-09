@@ -591,7 +591,7 @@ tips:
 
 `0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438` is the hex of the caller address pub key `0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48`.
 
-The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query substrate account(Bob) change).
+The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query-substrate-accountbob-change).
 
 ### query substrate account(Bob) change
 
