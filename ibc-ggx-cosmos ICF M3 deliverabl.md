@@ -399,6 +399,7 @@ SUCCESS [
     },
 ]
 ```
+
 ### wait for auto relay by hermes,about 30s
 
 ### query cosmos account(Alice) change
@@ -421,12 +422,13 @@ pagination:
   total: "0"
 ```
 
-### query substrate account(Bob) change
+### install substrate-interface
 
 ```bash
-# first install substrate-interface
 pip install substrate-interface
 ```
+
+### query substrate account(Bob) change
 
 ```bash
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
@@ -447,9 +449,15 @@ balances:
 
 ### transfer back to earth from ggx rococo
 
+In this step we should use `denom_trace_hash` from the previous step as a value for the flag `--denom`.
+
 ```bash
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --denom ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF  --dst-chain earth-0 --src-chain rococo-0 --src-port transfer --src-channel channel-0 --amount 999000
 ```
+
+tips:
+
+The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query substrate account(Bob) change).
 
 outout:
 
@@ -582,6 +590,8 @@ sender: 0x3078386561663034313531363837373336333236633966656131376532356663353238
 tips:
 
 `0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438` is the hex of the caller address pub key `0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48`.
+
+The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query substrate account(Bob) change).
 
 ### query substrate account(Bob) change
 
