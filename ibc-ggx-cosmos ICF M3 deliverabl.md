@@ -400,7 +400,7 @@ SUCCESS [
 ]
 ```
 
-### wait for auto relay by hermes,about 30s
+### wait for auto relay by hermes, about 30s
 
 ### query cosmos account(Alice) change
 
