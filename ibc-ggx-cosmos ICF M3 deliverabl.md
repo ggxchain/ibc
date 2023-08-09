@@ -77,7 +77,7 @@ hermes --config config/cos_sub.toml keys add --chain earth-0 --key-file config/a
 hermes --config config/cos_sub.toml keys add --chain rococo-0 --key-file config/bob_substrate_key.json --key-name Bob
 ```
 
-for example:
+**for example:**
 
 ```bash
 li@liyihangs-MBP hermes % hermes --config config/cos_sub.toml keys add --chain earth-0 --key-file config/alice_cosmos_key.json --key-name alice
@@ -100,7 +100,7 @@ cd hermes
 hermes --config config/cos_sub.toml create channel --a-chain earth-0 --b-chain rococo-0 --a-port transfer --b-port transfer --new-client-connection --yes
 ```
 
-for example:
+**for example:**
 
 ```bash
  li@liyihangs-MBP hermes % hermes --config config/cos_sub.toml create channel --a-chain earth-0 --b-chain rococo-0 --a-port transfer --b-port transfer --new-client-connection --yes
@@ -342,7 +342,7 @@ Call `assets->forceCreate(666, Id, BOB, Yes, 10)`.
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --number-msgs 1 --dst-chain rococo-0 --src-chain earth-0 --src-port transfer --src-channel channel-0 --amount 999000 --denom ERT
 ```
 
-for example:
+**for example:**
 
 ```bash
 2023-06-13T12:49:26.206298Z  INFO ThreadId(01) running Hermes v1.3.0+cb38eadb
