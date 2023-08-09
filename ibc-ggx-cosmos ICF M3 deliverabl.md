@@ -409,7 +409,7 @@ cd oct-planet
 earth --node tcp://localhost:26657 query bank balances $(earth --home .earth keys --keyring-backend="test" show alice -a)
 ```
 
-output:
+**output:**
 
 ```bash
 balances:
@@ -434,7 +434,7 @@ pip install substrate-interface
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
-output:
+**output:**
 
 ```bash
 account: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
@@ -449,13 +449,11 @@ balances:
 
 ### transfer back to earth from ggx rococo
 
-In this step we should use `denom_trace_hash` from the previous step as a value for the flag `--denom`.
-
 ```bash
 hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 --denom ibc/972368C2A53AAD83A3718FD4A43522394D4B5A905D79296BF04EE80565B595DF  --dst-chain earth-0 --src-chain rococo-0 --src-port transfer --src-channel channel-0 --amount 999000
 ```
 
-tips:
+**tips:**
 
 The value of flag `--denom` is `denom_trace_hash` from step [query substrate account(Bob) change](#query-substrate-accountbob-change).
 
@@ -524,7 +522,7 @@ SUCCESS [
 earth --node tcp://localhost:26657 query bank balances $(earth --home .earth keys --keyring-backend="test" show alice -a)
 ```
 
-output:
+**output:**
 
 ```bash
 balances:
@@ -543,7 +541,7 @@ pagination:
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
-output:
+**output:**
 
 ```bash
 account: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
@@ -587,7 +585,7 @@ amount: 2
 sender: 0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438
 ```
 
-tips:
+**tips:**
 
 `0x307838656166303431353136383737333633323663396665613137653235666335323837363133363933633931323930396362323236616134373934663236613438` is the hex of the caller address pub key `0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48`.
 
@@ -599,7 +597,7 @@ The value of flag `--denom` is `denom_trace_hash` from step [query substrate acc
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
-output:
+**output:**
 
 ```bash
 account: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
