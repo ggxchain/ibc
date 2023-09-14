@@ -11,7 +11,7 @@ scale-info = { version = "2.6", default-features = false, features = ["derive"],
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 
 # These dependencies
-openbrush = { version = "3.2.0", git = "https://github.com/Brushfam/openbrush-contracts", rev = "bae858b", default-features = false, features = ["psp37"] }
+openbrush = { tag = "3.2.0", git = "https://github.com/Brushfam/openbrush-contracts", default-features = false, features = ["psp37"] }
 trait-ibc = { path = "../trait-ibc", default-features = false, features = ["ink-as-dependency"] }
 ibc = { version = "0.28.0", default-features = false, features = ["parity-scale-codec", "serde"]}
 
