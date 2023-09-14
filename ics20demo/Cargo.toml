@@ -5,13 +5,13 @@ authors = ["Brushfam <dominik.krizo@727.ventures>"]
 edition = "2021"
 
 [dependencies]
-ink = { version = "4.1.0", default-features = false}
+ink = { version = "4.3.0", default-features = false}
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2.6", default-features = false, features = ["derive"], optional = true }
 serde = { version = "1.0.103", default-features = false, features = ["derive", "alloc"] }
 
 # These dependencies
-openbrush = { tag = "3.1.1", git = "https://github.com/Brushfam/openbrush-contracts", default-features = false, features = ["psp37"] }
+openbrush = { tag = "3.2.0", git = "https://github.com/Brushfam/openbrush-contracts", default-features = false, features = ["psp37"] }
 trait-ibc = { path = "../trait-ibc", default-features = false, features = ["ink-as-dependency"] }
 ibc = { version = "0.28.0", default-features = false, features = ["parity-scale-codec", "serde"]}
 

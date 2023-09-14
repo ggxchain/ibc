@@ -620,7 +620,7 @@ pub mod my_psp37_wrapper {
 
             match amount {
                 Amount::Native(coin) => {
-                    let timestamp = self.env().block_timestamp() + 60 * 1000; //microsecond
+                    let timestamp = self.env().block_timestamp().saturating_add(60 * 1000); //microsecond
                     let source_channel = msg.channel;
                     let denom = coin.denom;
                     let amount = coin.amount;
