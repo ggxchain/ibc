@@ -25,15 +25,18 @@ python 3.10+
 
 ```bash
 # Clone golden-gate
-git clone https://github.com/ggxchain/ggxnode
+git clone https://github.com/ggxchain/ggxnode.git
 cd golden-gate
+git checkout substrate-ibc-0.9.43
 
-# build golden-gate 
-cargo build --release --no-default-features --features="aura,with-rocksdb-weights,testnet"
+# build golden-gate brooklyn
+cargo build --release --no-default-features --features="aura,with-rocksdb-weights,brooklyn"
+
 # optional put polkadot cli into your BIN PATH
 export PATH="$PWD/./target/release/:$PATH"
 
-./target/release/golden-gate-node  --dev --ws-external --rpc-external --unsafe-ws-external --unsafe-rpc-external --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
+./target/release/ggxchain-node --dev --rpc-external --unsafe-rpc-external  --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
+
 ```
 
 ## spin up ignite
