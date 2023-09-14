@@ -562,7 +562,7 @@ hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 
 ### install cargo-contract
 
 ```bash
-cargo install --force --locked cargo-contract --version 3.0.1
+cargo install --force --locked cargo-contract --version 3.2.0
 ```
 
 ### deploy ink! contract
@@ -574,7 +574,23 @@ cargo contract build
 ```
 
 Open URL in your WEB browser to deploy ink! contract `my_psp37_wrapper.contract`
-https://testnet.sydney.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
+
+(1) you can use ggxchain explorer to deploy
+
+https://explorer.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
+
+(2) you can use contracts-ui to deploy
+
+https://contracts-ui.substrate.io/add-contract
+![1](./img/contracts-ui-1.jpg)
+![2](./img/contracts-ui-2.jpg)
+![3](./img/contracts-ui-3.jpg)
+![4](./img/contracts-ui-4.jpg)
+![5](./img/contracts-ui-5.jpg)
+
+**tips:**
+if you use explorer.ggxchain.io deploy ink! contract report "StorageDepositLimitExhausted", please use contracts-ui.substrate.io to deploy, and input "Storage Deposit Limit"
+
 
 ### call ink! executeTransfer to tranfer to cosmos
 
