@@ -25,15 +25,18 @@ python 3.10+
 
 ```bash
 # Clone golden-gate
-git clone https://github.com/ggxchain/ggxnode
+git clone https://github.com/ggxchain/ggxnode.git
 cd golden-gate
+git checkout substrate-ibc-0.9.43
 
-# build golden-gate 
-cargo build --release --no-default-features --features="aura,with-rocksdb-weights,testnet"
+# build golden-gate brooklyn
+cargo build --release --no-default-features --features="aura,with-rocksdb-weights,brooklyn"
+
 # optional put polkadot cli into your BIN PATH
 export PATH="$PWD/./target/release/:$PATH"
 
-./target/release/golden-gate-node  --dev --ws-external --rpc-external --unsafe-ws-external --unsafe-rpc-external --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
+./target/release/ggxchain-node --dev --rpc-external --unsafe-rpc-external  --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
+
 ```
 
 ## spin up ignite
@@ -559,7 +562,7 @@ hermes --config config/cos_sub.toml tx ft-transfer --timeout-height-offset 1000 
 ### install cargo-contract
 
 ```bash
-cargo install --force --locked cargo-contract --version 3.0.1
+cargo install --force --locked cargo-contract --version 3.2.0
 ```
 
 ### deploy ink! contract
@@ -571,7 +574,23 @@ cargo contract build
 ```
 
 Open URL in your WEB browser to deploy ink! contract `my_psp37_wrapper.contract`
-https://testnet.sydney.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
+
+(1) you can use ggxchain explorer to deploy
+
+https://explorer.ggxchain.io/?rpc=ws%3A%2F%2F127.0.0.1%3A9944#/contracts
+
+(2) you can use contracts-ui to deploy
+
+https://contracts-ui.substrate.io/add-contract
+![1](./img/contracts-ui-1.jpg)
+![2](./img/contracts-ui-2.jpg)
+![3](./img/contracts-ui-3.jpg)
+![4](./img/contracts-ui-4.jpg)
+![5](./img/contracts-ui-5.jpg)
+
+**tips:**
+if you use explorer.ggxchain.io deploy ink! contract report "StorageDepositLimitExhausted", please use contracts-ui.substrate.io to deploy, and input "Storage Deposit Limit"
+
 
 ### call ink! executeTransfer to tranfer to cosmos
 
