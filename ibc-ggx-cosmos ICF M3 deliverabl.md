@@ -24,19 +24,16 @@ python 3.10+
 ## spin up substrate/polkadot
 
 ```bash
-# Clone golden-gate
-git clone https://github.com/ggxchain/ggxnode.git
-cd golden-gate
-git checkout substrate-ibc-0.9.43
+# Clone ggxnode
+git clone https://github.com/ggxchain/ggxnode
+cd ggxnode
 
-# build golden-gate brooklyn
-cargo build --release --no-default-features --features="aura,with-rocksdb-weights,brooklyn"
-
+# build ggxnode brooklyn
+cargo build --release -p ggxchain-node --features brooklyn --no-default-features
 # optional put polkadot cli into your BIN PATH
 export PATH="$PWD/./target/release/:$PATH"
 
-./target/release/ggxchain-node --dev --rpc-external --unsafe-rpc-external  --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
-
+./target/release/ggxchain-node  --dev --rpc-external --unsafe-rpc-external --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
 ```
 
 ## spin up ignite
@@ -45,6 +42,7 @@ export PATH="$PWD/./target/release/:$PATH"
 git clone https://github.com/ignite/cli --branch v0.25.2
 cd cli
 make install
+export PATH=$HOME/go/bin:$PATH
 ```
 
 ## spin up cosmos chain
@@ -52,8 +50,8 @@ make install
 ```bash
 # clone Octopus ignite chain: oct-planet
 git clone https://github.com/ibc-test/oct-planet.git
-
-git checkout icf-m3
+cd oct-planet
+git checkout 76836e611a37ec435891a9d848e2d9e19a483f34
 
 # launch a cosmos chain: earth 
 ignite chain serve -f -v -c earth.yml
