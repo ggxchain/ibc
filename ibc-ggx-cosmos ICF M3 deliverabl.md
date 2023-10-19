@@ -62,7 +62,7 @@ ignite chain serve -f -v -c earth.yml
 ```bash
 $ git clone https://github.com/ibc-test/hermes.git
 $ cd hermes
-$ git checkout icf-m3
+$ git checkout polkadot-v0.9.43
 
 # build
 $ cargo build --release -p ibc-relayer-cli
