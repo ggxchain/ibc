@@ -41,8 +41,8 @@ export PATH="$PWD/./target/release/:$PATH"
 ```bash
 git clone https://github.com/ignite/cli --branch v0.25.2
 cd cli
-make install
 export PATH=$HOME/go/bin:$PATH
+make install
 ```
 
 ## spin up cosmos chain
@@ -432,6 +432,7 @@ pip install substrate-interface
 ### query substrate account(Bob) change
 
 ```bash
+cd hermes
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
@@ -520,6 +521,7 @@ SUCCESS [
 ### query cosmos account(Alice) change
 
 ```bash
+cd oct-planet
 earth --node tcp://localhost:26657 query bank balances $(earth --home .earth keys --keyring-backend="test" show alice -a)
 ```
 
@@ -539,6 +541,7 @@ pagination:
 ### query substrate account(Bob) change
 
 ```bash
+cd hermes
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
@@ -567,7 +570,7 @@ cargo install --force --locked cargo-contract --version 3.2.0
 
 ```bash
 git clone https://github.com/baidang201/ibc.git
-cd ics20demo
+cd ibc/ics20demo
 cargo contract build
 ```
 
@@ -590,7 +593,7 @@ https://contracts-ui.substrate.io/add-contract
 if you use explorer.ggxchain.io deploy ink! contract report "StorageDepositLimitExhausted", please use contracts-ui.substrate.io to deploy, and input "Storage Deposit Limit"
 
 
-### call ink! executeTransfer to tranfer to cosmos
+### call ink! executeTransfer to transfer to cosmos
 
 ![params](./img/executeTransfer.jpg)
 
@@ -611,6 +614,7 @@ The value of flag `--denom` is `denom_trace_hash` from step [query substrate acc
 ### query substrate account(Bob) change
 
 ```bash
+cd hermes
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
