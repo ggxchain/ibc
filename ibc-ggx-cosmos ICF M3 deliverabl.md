@@ -24,19 +24,16 @@ python 3.10+
 ## spin up substrate/polkadot
 
 ```bash
-# Clone golden-gate
-git clone https://github.com/ggxchain/ggxnode.git
-cd golden-gate
-git checkout substrate-ibc-0.9.43
+# Clone ggxnode
+git clone https://github.com/ggxchain/ggxnode
+cd ggxnode
 
-# build golden-gate brooklyn
-cargo build --release --no-default-features --features="aura,with-rocksdb-weights,brooklyn"
-
+# build ggxnode brooklyn
+cargo build --release -p ggxchain-node --features brooklyn --no-default-features
 # optional put polkadot cli into your BIN PATH
 export PATH="$PWD/./target/release/:$PATH"
 
-./target/release/ggxchain-node --dev --rpc-external --unsafe-rpc-external  --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
-
+./target/release/ggxchain-node  --dev --rpc-external --unsafe-rpc-external --rpc-methods=unsafe -d ./data -l info --enable-offchain-indexing=true -lpallet_ibc=trace -lpallet-ics20-transfer=trace --detailed-log-output
 ```
 
 ## spin up ignite
@@ -44,6 +41,7 @@ export PATH="$PWD/./target/release/:$PATH"
 ```bash
 git clone https://github.com/ignite/cli --branch v0.25.2
 cd cli
+export PATH=$HOME/go/bin:$PATH
 make install
 ```
 
@@ -52,8 +50,8 @@ make install
 ```bash
 # clone Octopus ignite chain: oct-planet
 git clone https://github.com/ibc-test/oct-planet.git
-
-git checkout icf-m3
+cd oct-planet
+git checkout 76836e611a37ec435891a9d848e2d9e19a483f34
 
 # launch a cosmos chain: earth 
 ignite chain serve -f -v -c earth.yml
@@ -64,7 +62,7 @@ ignite chain serve -f -v -c earth.yml
 ```bash
 $ git clone https://github.com/ibc-test/hermes.git
 $ cd hermes
-$ git checkout icf-m3
+$ git checkout polkadot-v0.9.43
 
 # build
 $ cargo build --release -p ibc-relayer-cli
@@ -434,6 +432,7 @@ pip install substrate-interface
 ### query substrate account(Bob) change
 
 ```bash
+cd hermes
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
@@ -522,6 +521,7 @@ SUCCESS [
 ### query cosmos account(Alice) change
 
 ```bash
+cd oct-planet
 earth --node tcp://localhost:26657 query bank balances $(earth --home .earth keys --keyring-backend="test" show alice -a)
 ```
 
@@ -541,6 +541,7 @@ pagination:
 ### query substrate account(Bob) change
 
 ```bash
+cd hermes
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
@@ -569,7 +570,7 @@ cargo install --force --locked cargo-contract --version 3.2.0
 
 ```bash
 git clone https://github.com/baidang201/ibc.git
-cd ics20demo
+cd ibc/ics20demo
 cargo contract build
 ```
 
@@ -592,7 +593,7 @@ https://contracts-ui.substrate.io/add-contract
 if you use explorer.ggxchain.io deploy ink! contract report "StorageDepositLimitExhausted", please use contracts-ui.substrate.io to deploy, and input "Storage Deposit Limit"
 
 
-### call ink! executeTransfer to tranfer to cosmos
+### call ink! executeTransfer to transfer to cosmos
 
 ![params](./img/executeTransfer.jpg)
 
@@ -613,6 +614,7 @@ The value of flag `--denom` is `denom_trace_hash` from step [query substrate acc
 ### query substrate account(Bob) change
 
 ```bash
+cd hermes
 ./scripts/sub-cli query-balances --account 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
 ```
 
